@@ -1,0 +1,569 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% I, the copyright holder of this work, release this work into the
+%% public domain. This applies worldwide. In some countries this may
+%% not be legally possible; if so: I grant anyone the right to use
+%% this work for any purpose, without any conditions, unless such
+%% conditions are required by law.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass[
+  digital,     %% The `digital` option enables the default options for the
+               %% digital version of a document. Replace with `printed`
+               %% to enable the default options for the printed version
+               %% of a document.
+%%  color,       %% Uncomment these lines (by removing the %% at the
+%%               %% beginning) to use color in the printed version of your
+%%               %% document
+  oneside,     %% The `oneside` option enables one-sided typesetting,
+               %% which is preferred if you are only going to submit a
+               %% digital version of your thesis. Replace with `twoside`
+               %% for double-sided typesetting if you are planning to
+               %% also print your thesis. For double-sided typesetting,
+               %% use at least 120 g/m² paper to prevent show-through.
+  nosansbold,  %% The `nosansbold` option prevents the use of the
+               %% sans-serif type face for bold text. Replace with
+               %% `sansbold` to use sans-serif type face for bold text.
+  nocolorbold, %% The `nocolorbold` option disables the usage of the
+               %% blue color for bold text, instead using black. Replace
+               %% with `colorbold` to use blue for bold text.
+  lof,         %% The `lof` option prints the List of Figures. Replace
+               %% with `nolof` to hide the List of Figures.
+  lot,         %% The `lot` option prints the List of Tables. Replace
+               %% with `nolot` to hide the List of Tables.
+]{fithesis4}
+%% The following section sets up the locales used in the thesis.
+\usepackage[resetfonts]{cmap} %% We need to load the T2A font encoding
+\usepackage[T1,T2A]{fontenc}  %% to use the Cyrillic fonts with Russian texts.
+\usepackage[
+  main=english, %% By using `czech` or `slovak` as the main locale
+                %% instead of `english`, you can typeset the thesis
+                %% in either Czech or Slovak, respectively.
+  english, german, czech, slovak %% The additional keys allow
+]{babel}        %% foreign texts to be typeset as follows:
+%%
+%%   \begin{otherlanguage}{german}  ... \end{otherlanguage}
+%%   \begin{otherlanguage}{czech}   ... \end{otherlanguage}
+%%   \begin{otherlanguage}{slovak}  ... \end{otherlanguage}
+%%
+%%
+%% The following section sets up the metadata of the thesis.
+\thesissetup{
+    date        = \the\year/\the\month/\the\day,
+    university  = mu,
+    faculty     = fi,
+    type        = bc,
+    department  = Y Soft,
+    author      = Jindřich Halabala,
+    gender      = m,
+    advisor     = {RNDr. Ondřej Krajíček},
+    title       = {UI element detection using reinforcement learning TODO},
+    TeXtitle    = {UI element detection using reinforcement learning TODO},
+    keywords    = {TODO, keyword2, ...},
+    TeXkeywords = {TODO, keyword2, \ldots},
+    abstract    = {%
+      This is the abstract of my thesis, which can
+
+      span multiple paragraphs.
+    },
+    thanks      = {%
+      These are the acknowledgements for my thesis, which can
+
+      span multiple paragraphs.
+    },
+    bib         = example.bib,
+    %% Remove the following line to use the JVS 2018 faculty logo.
+    facultyLogo = fithesis-fi,
+}
+\usepackage{makeidx}      %% The `makeidx` package contains
+\makeindex                %% helper commands for index typesetting.
+%% These additional packages are used within the document:
+\usepackage{paralist} %% Compact list environments
+\usepackage{amsmath}  %% Mathematics
+\usepackage{amsthm}
+\usepackage{amsfonts}
+\usepackage{url}      %% Hyperlinks
+\usepackage{markdown} %% Lightweight markup
+\usepackage{listings} %% Source code highlighting
+\usepackage{svg}      %% SVG figures
+\lstset{
+  basicstyle      = \ttfamily,
+  identifierstyle = \color{black},
+  keywordstyle    = \color{blue},
+  keywordstyle    = {[2]\color{cyan}},
+  keywordstyle    = {[3]\color{olive}},
+  stringstyle     = \color{teal},
+  commentstyle    = \itshape\color{magenta},
+  breaklines      = true,
+}
+\usepackage{floatrow} %% Putting captions above tables
+\floatsetup[table]{capposition=top}
+\usepackage[babel]{csquotes} %% Context-sensitive quotation marks
+\begin{document}
+%% The \chapter* command can be used to produce unnumbered chapters:
+\chapter*{Introduction}
+%% Unlike \chapter, \chapter* does not update the headings and does not
+%% enter the chapter to the table of contents. I we want correct
+%% headings and a table of contents entry, we must add them manually:
+\markright{\textsc{Introduction}}
+\addcontentsline{toc}{chapter}{Introduction}
+
+TODO: Theses are rumoured to be \enquote{the capstones of education}, so
+I decided to write one of my own. If all goes well, I will soon
+have a diploma under my belt. Wish me luck!
+
+
+\chapter{Introduction to object detection}
+Talk about AIVA, what is the goal of what I am making.
+\chapter{Existing solutions}
+Talk about existing solutions and why I decided to use reinforcement learning. Talk about existing RL-based object detectors.
+
+\chapter{Theory}
+Talk about the concept of reinforcement learning, Markov decision processes, Markov property, how the training works (state-value, action-value functions, advantage-value functions), exploration vs exploitation, Q-learning, Deep-Q-learning, Actor-Critic architecture, and other algorithms. 
+
+\section{Machine learning}
+Machine learning is the study of algorithms that allow computers to learn from data without explicit programming \cite[p. 5]{IB031}. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning (note that other categories, such as semi-supervised learning or self-supervised learning, are also sometimes stated, but they are usually just a mixture of the three main categories).
+
+In supervised learning (SL), the goal is to learn to label data when the correct labels are available during training. This is ideal for classification or regression, where we are able to get the correct labels (be it from human labeling or some other method).
+In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data which can be used to, for example, separate the data into groups (clustering) or to be able to generate new data similar to the existing data (some generative models such as autoencoders or GANs).
+
+Reinforcement learning (RL) may seem similar to SL because, again, the model is given some input data and tries to predict a label (an action). But unlike in SL, the algorithm is not given the correct answer after its prediction to learn. Instead, we have some mechanism (reward function) that is able to tell us how good or bad our prediction was. Our goal is to then learn to predict labels that will provide the biggest cumulative reward. This makes RL ideal for decision-making, especially in environments where we do not know the ideal strategy.
+
+\section{Reinforcement learning}
+Reinforcement learning problems are composed of two parts that interact with one another -- the agent and the environment. The agent is the algorithm we are trying to teach to make decisions. The environment is everything else -- if we are trying to make an algorithm that can drive a car, then the environment is all the other cars, how they move, all the roads, pedestrians, and also the car the agent is controlling. The agent interacts with the environment through its decisions and tries to do this in such a way that it is rewarded the most possible.
+
+We define the RL cycle. In the beginning, the environment is in some initial state. The agent observes the state and, based on this observation, decides to perform some action. The environment then reacts to this action, changing its state. The agent then observes the new state and also receives a reward based on the action. The agent can then change its behavior based on the reward. The agent then again chooses an action, and the cycle repeats as can be seen in figure \ref{fig:rl-cycle}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{diagrams/rl-cycle.pdf}
+    \caption{Reinforcement learning cycle}
+    \label{fig:rl-cycle}
+\end{figure}
+
+
+Each one of these cycles is called a time step and creates an experience -- a tuple of the original state, the action taken, the reward given, and the new state. When this cycle stops depends on the task and whether it has an end. For example, in a game of chess, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences from the initial state to the end form an episode. If there is no well-defined end, we call a task continuous. For example when we teach a robot to walk there is no goal, we just want it to walk the furthest or the fastest.
+
+Compared to supervised learning, this poses many more challenges. Namely, RL feedback is sequential, evaluative, and sampled.
+
+Feedback being sequential means that most of the tasks we encounter will be multiple steps long, and thus, the consequences of an action might not be apparent immediately. In the car driving example, if we turn the steering wheel and sway into the other lane, we probably won’t get hit immediately, but after a couple of seconds, thus it might not be obvious that the wheel turning is responsible for the low reward caused by crashing and not some other action we took right before the crash. Of course, continuous tasks are often solved by supervised learning models (time series prediction, large language models, etc.), but in these cases, we know the correct answers, so the model is usually punished right away.
+
+Feedback being evaluative means that the reward given is just a number. If we get a reward of let’s say 5, what does it mean? Is that good? Is it bad? We have no idea (unless we know the reward function). This leads to the need for exploration; more on this later.
+
+Lastly, sampled feedback. We only know the reward we received for the states and actions we actually tried, and in most cases, there are so many states that it is impossible to try every combination of state and action. Also, often the observation does not contain the entire state; for example, in our car driving example, the agent will only receive information from the cameras and the sensors on the car, but these will never be able to see everything, and there is no way to see in the minds of the other drivers who are also part of the environment. Of course, this is a problem even in supervised learning, as the dataset will never contain all the data that we might encounter in the future. \cite{GDRL}
+
+\section{Markov decision process}
+In order to formally define RL and its goal, we first have to formally define the environment. There are multiple ways in which we can define an environment, but the most common representation is a Markov decision process (MDP). Formally, MDP is defined as a tuple $(S, A, p, r)$.
+
+$S$ is the set of all possible states of the environment -- the state space. It can be both discrete (in chess, there is a finite amount of pieces that can be located in a finite amount of positions) or continuous (the speed of a car or its position can be any real number).  At each time step t, the MDP is in a state $s_t\in S$.
+
+$A$ is a set of all possible actions that can be done by the agent -- the action space. Again, it can be both discrete or continuous (or a combination of both).
+
+$p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$ that, for a given state $s$ from $S$ and a given action $a$ from $A$, returns a probability distribution over the states $s'\in S$ which tells us the probability of the MDP transitioning from $s$ to $s'$ given that action $a$ was selected. Formally it can be defined as:
+\[
+p(s'|s,a)=P(S_t=s'|S_{t-1}=s,A_{t-1}=a)
+\]
+Of course, since we are dealing with probabilities, we want the sum of all the probabilities for a given state $s$ and action $a$ to be equal to one:
+\[
+\sum_{s'\in S} p(s'|s,a)=1, \forall s \in S, \forall a \in A
+\]
+In practice, some action a might not be possible in a state $s$, but we can solve this problem by setting the probability of $p(s|s, a) = 1$ and $p(s' | s, a) = 0, \forall s'\in S \setminus s$ -- the MDP will \enquote{transition} back into the original state with a probability of one if such action is chosen.
+
+Lastly, $r$ is the reward function. Depending on the use case, it can be defined either as $r\colon S \times A \to \mathbb{R}$ -- the expected reward given for choosing action $a$ in state $s$:
+\[
+r(s,a)= \mathbb{E} [R_t|S_{t-1}=s, A_{t-1}=a]
+\]
+\cite[p. 17, p. 54]{PA230, GDRL} or as $r\colon S\times A \times S \to \mathbb{R}$ -- the expected reward given for choosing action $a$ in state $s$ given we transition into state $s'$:
+\[
+r(s, a, s')= \mathbb{E} [R_t|S_{t-1}=s, A_{t-1}=a, S_t=s']
+\]
+\cite[p. 54]{GDRL}
+Which one we choose depends on the task we are solving. The main distinction is whether we only care about transitioning from one state to the other or if we also care about how that transition was achieved. For example, when driving a car, we might want to reward differently braking using the engine and braking using the brakes -- they both achieve the same thing (the resulting state is the same), but they were achieved using a different method (different action).
+
+Another thing that is often defined is the set of initial states $S^i \subseteq S$. When a MDP is initialized, the initial state is chosen from this subset using some probability distribution $\mathcal{I}$ over these states. Of course, we can omit defining the set $S^i$ and just make the probability of all the other states zero. \cite[p. 50]{GDRL}
+
+Similarly, a set of all terminal states can be defined. The MDP ends when it gets into one of the terminal states. But once again, we can omit this by defining the transition function in such a way that every transition from a terminal state has a probability of 1 of transitioning back into the state itself and by ensuring that such transition always has a reward of 0.
+Simple MDPs can be visualized as diagrams, as can be seen in figure \ref{fig:mdp}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.75\linewidth]{diagrams/mdp.pdf}
+    \caption{Markov decision process. Terminal states are depicted by squares. Transition probabilities are purple; rewards are green.}
+    \label{fig:mdp}
+\end{figure}
+
+\subsection{Markov property}
+Notice that the probabilistic transition function $p$ only takes the current state and action as input. Importantly, it does not take history into consideration. The probability of transitioning from state $s$ to state $s'$ using action $a$ is always the same no matter how we got into the state $s$. This memorylessness of MDPs is known as the Markov property \cite[p. 49]{GDRL}, and it is important to remember when implementing an environment since many RL algorithms rely on the environment to fulfill the Markov property. It can be formally defined as
+\[
+P(S_{t+1}|S_t,A_t)=P(S_{t+1}|S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
+\]
+An example of an environment that breaks this property could be the game of Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}} where the state is only the current frame. From just one frame, it is not possible to know which way or at what speed the ball will move after the next input. We can, of course, easily fix this by including not only the position but also the speed and direction of the ball in the state (or using other techniques such as frame-stacking, where we include multiple frames in the observation). In real-world scenarios, fully capturing movement may require including higher-order dynamics like acceleration or jerk. However, in practice, modeling up to acceleration is typically sufficient for most RL tasks.
+
+\subsection{MDP modifications}
+It should be mentioned that there are many possible extensions for MDPs that could be necessary for representing actual environments, such as continuous time MDPs, which do not operate on discrete time, or multi-agent MDPs, which allow multiple agents to interact with the environment at the same time. \cite[p. 59]{GDRL}
+
+One extension that I want to talk about more is partially observable MDP (POMDP). As mentioned earlier, in most cases, the agent does not see the entire state of the MDP it interacts with, but only some part of it -- an observation. To account for this, we add two more properties into the tuple defining the MDP -- $\mathcal{O}$ and $\epsilon$. $\mathcal{O}$ is the set of all possible observations -- observation space. $\epsilon$ is a function $S \to \mathcal{D}(\mathcal{O})$ -- for a given state $s$ it returns a probability distribution over the observation space. However, to make things simpler, we will consider only regular MDPs for the rest of this chapter.
+
+\section{Policy}
+Now that we have formally defined the environment using a MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As already mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$, and since the ending state of one experience and the initial state of the following experience is always the same, we can write it only once: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\cdot A \cdot \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just won't give us any reward or transition the environment into a different state. History is then some prefix of trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\cdot A \cdot \mathbb{R})^{*}S$. The agent has to make the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\cdot A \cdot \mathbb{R})^{*}S \to \mathcal{D}(A)$, which returns a distribution over the action space based on the history up to that point \cite[p. 19]{PA230}.
+
+If we assume that the Markov property is fulfilled, we can simplify policy to just $\pi\colon S \to \mathcal{D}(A)$ because in that case, we know that the environment is memoryless, and thus, it does not matter how we ended up in the state $s_t$. Thanks to this, our agent (and its underlying policy) can be memoryless as well. Note that this is only true if we receive the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might help us differentiate between them).
+
+We can further simplify the policy by making it deterministic -- instead of returning a probability distribution $\mathcal{D}(A)$ it returns just a single action $a$. Such policy can be defined as just $\pi\colon S \to A$.
+
+\section{The goal of RL}
+Now that we have fully formally defined the environment (MDP) and the agent (policy), we can define the goal of RL. The goal is to find such a policy $\pi^*$ that maximizes the expected discounted cumulative reward, also referred to as the discounted return. The cumulative reward of a trajectory $\tau$ is defined as the sum of all received rewards:
+\[
+r_1+r_2+r_3+\dotsb = \sum_{i=0}^{\infty} r_{i+1}
+\]
+To get the discounted return, we exponentially decay the rewards by some discount factor $\gamma \in [0,1)$. This has two reasons. Since the trajectory can be infinitely long, if the policy found a cycle with a positive reward (even very small), it would lead to the cumulative reward being infinite. Second, it encourages to find policies that not only have the maximum reward but also get it as fast as possible because the reward will be less discounted (a chess agent that can beat anyone in 20 moves would be considered just as good as one that can beat anyone in 1000 moves if we did not have this discounting). So, the discounted return $G$ on a trajectory $\tau$ with discount factor $\gamma$ is defined as:
+\[
+G(\tau)=r_1+\gamma \cdot r_2+ \gamma^2 \cdot r_3+\dotsb = \sum_{i=0}^{\infty} \gamma^i\cdot r_{i+1}
+\]
+Finally, the expected discounted cumulative reward. As stated before, the environment can start in many different states (with possibly different probabilities), and taking an action in some state can lead to different transitions (again with possibly different probabilities). Because of this, even a deterministic policy can have different trajectories on the same MDP each time, and those can, in turn, have different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, not just in some specific single case.
+
+\section{Value functions}
+Talk about state value function $V$, action value function $Q$, and advantage value function $A$.
+
+\section{Q-learning}
+Talk about Q-learning -- the simplest RL algorithm.
+
+\section{Exploration exploitation trade-off}
+Talk about why this is a problem and some solutions to fixing it.
+
+\chapter{RL in practice}
+Talk about how RLs are trained, libraries, etc.
+
+\section{Gymnasium}
+More about gymnasium -- library for defining environments TODO
+
+Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of reinforcement learning environments. It is a maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Other than the creation of environments, it also contains many wrappers for environments that make it much easier to do things like normalization, clipping, recording of the training, or vectorization of parallel training. It also provides many predefined environments that can be used to test new RL algorithms.
+
+To create a new environment, you need to define a Python class that inherits from the \verb|gymnasium.Env| class. As a part of this class, you need to define your action and observation spaces as well as a couple of methods for interaction with your environment. Gymnasium provides the following options for your spaces:
+
+\begin{itemize}
+    \item \verb|Box| -- represents a tensor (n-dimensional matrix of numbers) of a fixed shape. the numbers inside can be both bounded (in some specified range) or unbounded. This type is useful for a representation of images or continuous actions.
+    \item \verb|Discrete| -- represents a space of finitely many integers. This is especially useful for discrete action spaces and acts essentially as an enum.
+    \item \verb|MultiBinary| -- tensor of boolean values
+    \item \verb|MultiDiscrete| -- tensor of discrete values. Is useful when your action space is discrete, but more than one action can be done at the same time (for example, on a game console, a move direction is pressed, but the jump button can be pressed as well)
+    \item \verb|Text| -- prostě text xd
+    \item Composite spaces -- multiple fundamental spaces can be combined into a \verb|Dictionary|, \verb|Tuple|, \verb|Sequence| of variable length, a \verb|Graph| or a \verb|Union|.
+\end{itemize}
+
+Once the observation space and action space are defined, you need to implement the following methods:
+
+\begin{itemize}
+    \item \verb|reset| -- when called, resets the environment into a random initial state and returns the first observation
+    \item \verb|step| -- takes an action as its argument and executes it. It then returns a new observation, reward for the action, and whether the episode ended (be it due to termination or some other reason like timeout)
+    \item \verb|render| -- an optional method that can be used to inform a user about the current state. Useful for debugging or when you want to record the training progress
+\end{itemize}
+
+Once an environment is defined, it can be registered and then created using the \verb|gymnasium.make| function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a RL algorithm.
+
+\section{Stable-baselines 3}
+More about SB-3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} -- library implementing a bunch of RL algorithms
+
+
+\chapter{Training}
+
+\section{Defining the problem}
+More about the problem, what we want to achieve, what observation space and action space was used and so on.
+
+\section{Choosing an algorithm}
+PPO is the best. Say why
+
+\section{Hardware}
+The training was done using the stable-baselines library on my personal computer (RTX 3080, i5-12400). TODO
+
+\section{Training progression}
+At first, I tried to train a model directly for the final problem (finding hierarchical bounding boxes of elements on the screen) on a simple 100x100 image using the first prototype of the reward function (described later). Unsurprisingly, this did not work very well. The model struggled to learn anything sensible, it never even managed to get a positive reward (Poznámka: později jsem zjistil, že v té reward funkci je chyba, která pravděpodobně ani neumožnila se dostat do plusu, ale i tak by to nefungovalo). For that reason, I decided to change my strategy. Instead of starting with the final problem, I would start with a very simplified version and gradually make it more difficult.
+
+This allows for a much easier tuning of parameters (such as trying different learning algorithms, their hyperparameters, changes to image processing, etc.). On the complex problem, all of them would likely fail horribly, so comparing their performance would not be of much value. But if I try them on a problem where they all learn at least something, I can easily compare them. At this point, I did not even know whether RL could be used for object detection.
+
+This would also allow for transfer learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that does not know anything.
+
+\subsection{Static square of uniform size}
+The very simplest problem I could come up with that at least somewhat resembles the real problem is the following.
+\begin{itemize}
+    \item State: consists of a black 100x100 px image with a white square in the middle. The position of this square is always the same between episodes, and its size does not change. An example can be seen in figure \ref{fig:env0}
+    \item Action: the model returns four numbers representing the bounding box (x and y coordinates of the center and the width and height). The action has no effect on the state. It only gives a reward -- the state does not change. The episode is always one step long.
+    \item Reward: The reward is calculated using the Intersection over Union (IoU) metric (size of the intersection of the real bounding box compared to the guess divided by their union). When the bounding boxes do not overlap at all, IoU is always zero, no matter how far away they are. In those cases, the reward is minus the distance of the centers of the bounding boxes
+    \item Algorithm: PPO with the default CNN strategy provided by SB-3 as shown in figure \ref{fig:cnn_policy}, default hyperparameters
+\end{itemize}
+
+\begin{figure}
+    \includegraphics[width=0.5\linewidth]{env_examples/env0.png}
+    \caption{Example of the simplest environment with a static square}
+    \label{fig:env0}
+\end{figure}
+
+\begin{figure}
+    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/cnn_policy.pdf}}
+    \caption{Architecture used by CNN policy. TODO make more readable somehow}
+    \label{fig:cnn_policy}
+\end{figure}
+
+I expected the model to overfit very quickly since the state was always identical, and thus, there was one identical action that always yielded the best possible reward, but surprisingly, this did not happen, and the agent actually did pretty poorly, only managing to get an average IoU of 0.8. It also started to critically forget quite quickly, and it never recovered.
+
+Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of exactly one observation, the biggest possible reward is 1 (since that is the highest score of IoU). The x-axis shows the elapsed timesteps. It reached its peak after around 180k episodes, and it never recovered.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v0_rew.svg}}
+    \caption{The mean reward per episode for the simple static square environment}
+    \label{fig:v0_rew}
+\end{figure}
+
+
+\subsection{Moving square of uniform size}
+The next step forward was to make the square move. The initial state was created by randomly choosing a position within the image and placing the square there. All the other options (reward, action, and algorithm) remain the same. Some examples of this environment can be seen in figure \ref{fig:env1}.
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{env_examples/env1.png}
+    \caption{Four examples of the environment with a moving square}
+    \label{fig:env1}
+\end{figure}
+
+The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a negative reward. Just like the previous model, this one also started catastrophically forgetting. In figure \ref{fig:v1_rew}, you can see the comparison between training in the two environments.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v1_vs_v0_rew.svg}}
+    \caption{The mean reward per episode for the environment with moving square (orange) compared to the static square (gray)}
+    \label{fig:v1_rew}
+\end{figure}
+
+\subsection{Moving rectangle}
+The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. \ref{fig:env2}
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{env_examples/env2.png}
+    \caption{Four examples of the environment with moving rectangles}
+    \label{fig:env2}
+\end{figure}
+
+This time, I also wanted to try the other network architecture provided by the SB-3 library \verb|MlpPolicy|, which has a simpler, non-CNN-based architecture shown in figure \ref{fig:mlp_policy}. It is simpler (1.3 million parameters compared to 2.7 million), but for such a simple problem, that could still be more than enough.
+
+\begin{figure}
+    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/mlp_policy.pdf}}
+    \caption{Architecture used by MLP policy.}
+    \label{fig:mlp_policy}
+\end{figure}
+
+The MLP policy actually outperformed the CNN by a bit, and it also seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible from figure \ref{fig:v2_mlp_cnn}.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v2_mlp_cnn.svg}}
+    \caption{Comparison of the mean reward of the MLP policy (blue) and CNN policy (orange).}
+    \label{fig:v2_mlp_cnn}
+\end{figure}
+
+\subsection{Multiple rectangles}
+Since the performance of detecting a single object seemed pretty good, I decided to move on to more objects.
+\begin{itemize}
+    \item State: consists of a black 100x100 px image. Then, there are five attempts at placing a rectangle of random size in a random place. If it does not overlap with any already placed rectangle, it is added to the image. Because of this randomness, the amount of objects changes between episodes; it can be anywhere between 1 and 5, but on average, it is 3.5 objects. \ref{fig:env3}
+    \item Action: the model returns 4 numbers representing the bounding box (x and y coordinates of the center and the width and height). If the predicted bounding box overlaps with any of the objects, that object is removed from the state (all of it, even if the prediction does not cover all of it)
+    \item Reward: The reward calculation is very similar to the previous environments with just one object. If the prediction overlaps any objects, their IoU is the reward (if it overlaps multiple, then the maximum IoU is given). The episode is terminated when all objects are removed or stopped after $n$ guesses, where $n$ is the starting amount of objects. Note that the model is not directly punished for selecting more than one object, but since only one reward is given, it is more beneficial to select them separately since we want to maximize the cumulative reward during an episode.
+\end{itemize}
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{env_examples/env3.png}
+    \caption{Four examples of the environment with multiple moving rectangles}
+    \label{fig:env3}
+\end{figure}
+
+Again, I tried both MLP and CNN strategies. The results can be seen in figure \ref{fig:v3_mlp_cnn}. At first glance, the results might seem just as good as in the previous environment, but remember that since the episodes last multiple timesteps (3.5 on average), the results are pretty poor as the maximum possible reward per episode is now around 3.5, whereas before, it was just 1. When we look at the episode length during training in figure \ref{fig:v3_len}, we can see that the model did use multiple steps for each episode, yet it still did not manage to achieve good results.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_mlp_cnn.svg}}
+    \caption{Comparison of the mean reward of the MLP policy (blue) and CNN policy (red).}
+    \label{fig:v3_mlp_cnn}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_len.svg}}
+    \caption{Comparison of the mean reward of the MLP policy (blue) and CNN policy (red).}
+    \label{fig:v3_len}
+\end{figure}
+
+The next thing I tried was changing the definition of the action. Before, the four numbers represented the coordinates of the center along with the bounding box width and height. My thought process was that maybe the convolutional layers are not good at quantifying size; instead, they are better at finding a position of some pattern. So instead of center, height and width I changed the action to represent the coordinates of the top-left corner and the coordinates of the bottom-right corner. 
+
+As can be seen in figure \ref{fig:v3_corner}, this change did help the CNN architecture model a bit but not by a lot. Surprisingly it made the MLP-based agent much worse.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_corner.svg}}
+    \caption{Comparison of the mean reward of the MLP policy (cyan) and CNN policy (pink) when corners are used as the action.}
+    \label{fig:v3_corner}
+\end{figure}
+
+Another idea I had was to utilize transfer learning. I did have a trained agent from the previous environment who was pretty good at finding one rectangle, so maybe if I used it here, it could use its already-learned knowledge and do better than the agents that started from the very beginning. The agent did start off much better than the new ones, but it quickly forgot everything and did not catch up. Below is the comparison of the transfer learning agent (blue) to the CNN-based agent shown before:
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_transfer.svg}}
+    \caption{Comparison of the mean reward of the original agent (pink) and the transferred agent (blue).}
+    \label{fig:v3_transfer}
+\end{figure}
+
+In all of the charts, we can see that all the agents got to some point of knowledge relatively quickly, but after around 200k epochs, the progress slowed down massively or stopped completely. This could be due to the network being too simple to learn the problem, so I tried increasing the network size. Thankfully, this is relatively easy as SB-3 is based on PyTorch, so any kind of network can be passed to the training algorithm. As could be seen in figure \ref{fig:cnn_policy}, which shows the architecture of the CNN policy, both the actor and critic share a feature extractor, and then each of them only has one fully connected layer and nothing else, so it would be no wonder if they could not learn much.
+
+In the new architecture, I added an extra layer to the shared feature extractor (poznámka: tohle byl spíš omyl, protože jsem moc nechápal co dělám xd) as well as adding two extra layers to each the actor and the critic. This meant that the model had around 6 million parameters. The model now had the architecture shown in figure \ref{fig:bigger_net_policy}.
+
+\begin{figure}
+    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/bigger_net_policy.pdf}}
+    \caption{New CNN-based policy with larger networks for actor and critic.}
+    \label{fig:bigger_net_policy}
+\end{figure}
+
+This change helped quite a bit. It performed the same as the simple networks in less than 6 times the number of episodes, and it continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} shows the comparison between the bigger network, the best MLP policy model, and the best CNN policy model. The mean episode lengths did not differ dramatically.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_bigger_net.svg}}
+    \caption{Comparison of the bigger network (orange), best small MLP model (blue), and best small CNN model (pink).}
+    \label{fig:v3_bigger_net}
+\end{figure}
+
+The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. While this might still sound pretty bad, note that because of the small size of the image, IoU is pretty strict. For example, if for a rectangle of size 20x20, we guessed a bounding box of the correct size but shifted to the left and down by 2 pixels, the IoU would be only 0.68 even though the guess is only off by 10  \%. Another problem that brings the average down is that sometimes when the image contains two objects far apart, the model gets confused and predicts a bounding box between them repeatedly until the episode is stopped; an example of this behavior can be seen in figure \ref{fig:v3_stuck}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=0.5\linewidth]{results/v3_stuck.png}
+    \caption{Example of the model getting stuck when two objects are far apart. White rectangles are the actual objects, and grey is the prediction.}
+    \label{fig:v3_stuck}
+\end{figure}
+
+\subsection{Different shapes}
+Now that the model was able to predict multiple rectangles in a single image with quite good success, the next step was to introduce other shapes as well. The environment is identical to the previous one, but now, instead of just rectangles, there could also be ellipses and triangles (both of any size and four different possible orientations). Since the rules were still the same, there were an average of 3.5 objects, and they did not collide. Some examples of this environment can be seen in figure \ref{fig:env4}.
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{env_examples/env4.png}
+    \caption{Four examples of the environment with a moving square}
+    \label{fig:env4}
+\end{figure}
+ 
+The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results as can be seen in figure \ref{fig:v4_bigger_net}.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_bigger_net.svg}}
+    \caption{Comparison of the environment with just rectangles (orange) and with other shapes (pink).}
+    \label{fig:v4_bigger_net}
+\end{figure}
+
+Since the problem is similar to the previous one, I again tried to use transfer learning with the best model from the previous environment for the new one. It actually started with very good results and stayed there for the rest of the training, only improving a little bit, see figure \ref{fig:v4_transfer}.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_transfer.svg}}
+    \caption{Comparison of the rectangle-only environment (brown), model with other shapes from scratch (pink) and transferred (blue).}
+    \label{fig:v4_transfer}
+\end{figure}
+
+This showed me that it was definitely possible to get good results. But I wanted to avoid transfer learning, if possible, until the very end because if it were needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further. It is a common practice not to create your own feature extractor but instead to use an already existing convolutional network trained by someone else, remove the last layer, and use that as a feature extractor [Source???]. I wanted to try exactly that.
+
+ResNet18 is a model architecture first proposed in the paper Deep Residual Learning for Image Recognition (\url{https://arxiv.org/abs/1512.03385}). The architecture of ResNet18 is shown in figure \ref{fig:resnet}, source (\url{https://www.researchgate.net/figure/Proposed-Modified-ResNet-18-architecture-for-Bangla-HCR-In-the-diagram-conv-stands-for_fig1_323063171}).
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/resnet.png}
+    \caption{Architecture of ResNet18}
+    \label{fig:resnet}
+\end{figure}
+
+Most notably, it contains 18 convolutional layers (hence the 18 in the name), batch normalization after most of the convolutional layers, and skip connections which allow some of the input to skip the layers, which helps with vanishing gradient. Also, at the end, we can see an adaptive average pooling layer. Unlike regular pooling layers, this one has the output size as a parameter and chooses the stride and kernel size automatically based on the input. This means that we can pass any size of input into it, and the output will be the same size. To use it in our model, we cut off its last fully connected layer.
+
+A slight complication is that ResNet18 is meant for colored images (3 channels), but we are currently using binary grayscale images (1 channel), although this might change in the future. There are multiple ways of solving this problem; the simplest is to just duplicate the one channel 3 times. I did something a bit different, adding a convolutional layer at the beginning with a kernel of size 1x1x3, which creates 3 feature maps from our one image. This is very similar to just duplicating the channel 3 times, but the kernel contains learnable parameters, so it is possible for the channels to be different if the network finds that useful. The entire architecture is shown in figure \ref{fig:resnet_policy}.
+
+It is also important to note that the pre-trained ResNet18 (provided by PyTorch) was trained on the COCO dataset, which consists of photographs. This could mean it does not perform as well on binary images (and later on images of websites), but for now, that hopefully should not be a problem.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/resnet_policy.pdf}
+    \caption{The new architecture, using ResNet18 as a feature extractor. TODO make more readable}
+    \label{fig:resnet_policy}
+\end{figure}
+
+A notable effect of this change is that the training is now around 3 times slower (which means 1 million timesteps now take around 2.5 hours on my computer. Hopefully, this could be offset by the improved performance).
+
+I tried again on the same environment, and the results were not great, as visible in figure \ref{fig:v4_resnet_frozen}. I was very surprised by how poor the results were, but I soon found the cause. As the ResNet18 feature extractor was already pre-trained, I thought freezing its weights would make the training faster while not really affecting the results, but I was very wrong. When I tried training again, this time with the weights unfrozen, I got a much better result shown in figure \ref{fig:v4_resnet_finetune}.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_frozen.svg}}
+    \caption{Comparison of the old network trained from scratch (pink), transferred model (blue) and new network with ResNet18 feature extractor (cyan).}
+    \label{fig:v4_resnet_frozen}
+\end{figure}
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_finetune.svg}}
+    \caption{Comparison of the old network trained from scratch (pink), transferred model (blue) and new network with ResNet18 feature extractor (grey).}
+    \label{fig:v4_resnet_finetune}
+\end{figure}
+
+It got the same result as the current best model in just above 500k timesteps, and it even overtook it by a noticeable margin. Sure, the new network was slower to train, but since the previous best model was transferred, it also needed its previous model, so in total, the training was actually faster.
+
+I also wanted to check whether this improvement was caused by the feature extractor being pre-trained or just by the network being significantly bigger. So I repeated the same exact training, but this time with ResNet18 not being pre-trained. In figure \ref{fig:v4_resnet_from_scratch} is the comparison of my old architecture being trained from scratch compared to the new architecture being trained from scratch. We can see that the results are very similar, so I can confidently say that a pre-trained feature extractor does indeed make a difference, although it still has to be fine-tuned.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_from_scratch.svg}}
+    \caption{Comparison of the old network trained from scratch (pink) and the new network with the ResNet18 feature extractor being trained from scratch (orange).}
+    \label{fig:v4_resnet_from_scratch}
+\end{figure}
+
+\subsection{Hollow shapes}
+Since it is important for the final model to be able to detect objects located inside one another (to deduce their hierarchy), the next step I wanted to try was to do exactly that -- include shapes inside other shapes. But to do that, I would first need the objects to be hollow. Some examples can be seen in figure \ref{fig:env5}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{env_examples/env5.png}
+    \caption{Four examples of the new environment}
+    \label{fig:env5}
+\end{figure}
+ 
+I believed that this change would have little to no impact, but I still wanted to try, just in case. However, as expected, this had almost no impact on the training (gray is the old environment, and blue is the new one with hollow shapes), although we can see a couple more dips in figure \ref{fig:v5}.
+
+\begin{figure}
+    \centering
+    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v5.svg}}
+    \caption{Comparison of the old environment with filled-in shapes (gray) and the new with hollow shapes (blue)}
+    \label{fig:v5}
+\end{figure}
+
+\subsection{Bigger images}
+One thing that is still very different between my prototype and what should be the final product is the size of the input image. AIVA currently mostly uses images in the FullHD format (1920x1080px). Of course some downscaling is possible if we do not need great details (for example for reading small text) but downscaling the image all the way to 100x100px would most likely not work very well and the aspect ratio is also wrong. For these reasons I wanted to try making the input image larger and see if the current model is able to work with them just as well as with the smaller ones. Thanks to the aforementioned adaptive pooling layer in ResNet18, I only needed to change the size of the observation space.
+
+At first I wanted to go all the way to FullHD or at least to HD but unfortunately this was not possible due to hardware limitations. The training used all of the GPUs dedicated RAM (10 GB) as well as the shared RAM (16 GB) and then crashed. The largest resolution I managed to get working was 480p (640x480px) and even then I had to cut the batch size in half (from 64 to 32). Since the image was bigger I also increased the amount of objects on it on average from 3.5 to 15.
+
+The training started similarly to the previous ones but it got stuck pretty quickly and did not improve much afterwards (blue is the previous model, red is the new one)
+
+At first glance this chart might not look that bad, especially since I stopped the training after just around 300k episodes. But remember that this environment contains many more objects and thus much higher possible cumulative reward. While the old model scores around 0.5 reward per object, the new one scores only around 0.04 per object. Also, to even get to this point took over 5 hours of training.
+
+From testing the model it seems that it learned that placing large bounding boxes in places where something is located gives positive rewards and it did not explore enough to realize that selecting each individually gives much bigger reward. I tried solving this issue by adding a new factor to the reward function that gave a negative reward that is equal to the percentage of the guess that is covered by objects that are not the one with the highest IoU which should discourage the model from selecting more than one object at the same time. (Poznámka: úplně jsem ještě neotestoval, jestli tahle změna pomohla, protože se mi nechtělo trénovat další model, který stejně failne. Je potřeba to otestovat a zkusit další možné výpočty, protože tenhle si myslím, že trestá málo).
+
+Since 480p was very slow I decided to scale it down for now to just 200x200px. This still quadruples the observation space and halves the training speed. I still had more objects (this time 12 on average). Unfortunately even this time the training was bad, struggling to even get into the positives and being much more unstable, which I believe is due to the new negative rewards. (blue is the new 200x200px model, red is the 480p one). Again, the trained model just placed semi-random large rectangles covering multiple objects at once.
+
+To see whether it was the size change or the addition of more objects that caused the model to struggle I also trained another 200x200px model but this time with the same 4 objects per image as before. This model did perform slightly worse but not by that much, although it seemed to be a lot more unstable (more dips in the performance). (blue is the model on 100x100px env, pink is on the 200x200px env).
+
+This mostly confirmed to me that more objects were the main problem although the bigger observation space also did not really help. Lastly, I again tried transfer learning. I took the model trained on a 200x200px env with few objects and let it train on a 200x200px env with many objects. It started quite well (the model trained on a few objects worked pretty well even with more objects) but the fine tuning did not help and it never recovered back to how good it was at the beginning.
+
+This to me suggested two possible problems. The feature extraction is not good enough and it loses too much information for the model to decide correctly. I don't think this is the case since ResNet18 is a very large model that showed very good results even on much more complex tasks and on bigger images. So the other possible cause is that the current reward function is not good enough when there are many objects.
+	To be continued…
+
+
+\chapter{Comparison with other methods}
+
+
+\printbibliography[heading=bibintoc] %% Print the bibliography.
+
+
+\appendix %% Start the appendices.
+\chapter{An appendix}
+Here you can insert the appendices of your thesis.
+
+\end{document}
