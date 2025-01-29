@@ -211,6 +211,7 @@ If we assume that the Markov property is fulfilled, we can simplify policy to ju
 We can further simplify the policy by making it deterministic -- instead of returning a probability distribution $\mathcal{D}(A)$ it returns just a single action $a$. Such policy can be defined as just $\pi\colon S \to A$.
 
 \section{The goal of RL}
+\label{section:goal}
 Now that we have fully formally defined the environment (MDP) and the agent (policy), we can define the goal of RL. The goal is to find such a policy $\pi^*$ that maximizes the expected discounted cumulative reward, also referred to as the discounted return. The cumulative reward of a trajectory $\tau$ is defined as the sum of all received rewards:
 \[
 r_1+r_2+r_3+\dotsb = \sum_{i=0}^{\infty} r_{i+1}
@@ -219,16 +220,51 @@ To get the discounted return, we exponentially decay the rewards by some discoun
 \[
 G(\tau)=r_1+\gamma \cdot r_2+ \gamma^2 \cdot r_3+\dotsb = \sum_{i=0}^{\infty} \gamma^i\cdot r_{i+1}
 \]
-Finally, the expected discounted cumulative reward. As stated before, the environment can start in many different states (with possibly different probabilities), and taking an action in some state can lead to different transitions (again with possibly different probabilities). Because of this, even a deterministic policy can have different trajectories on the same MDP each time, and those can, in turn, have different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, not just in some specific single case.
+Finally, the expected discounted cumulative reward. As stated before, the environments are often stochastic -- they can start in many different states (with possibly different probabilities), and taking an action in some state can lead to different transitions (again with possibly different probabilities). Because of this, even a deterministic policy can have different trajectories on the same MDP each time, and those can, in turn, have different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, not just in some specific single case.
 
 \section{Value functions}
-Talk about state value function $V$, action value function $Q$, and advantage value function $A$.
+
+For a given policy $\pi$, we can calculate value functions. These are functions that describe how well a policy does in some situation. They can be used to compare policies with one another or used for learning purposes.
+
+\subsection{State-value function}
+The state-value function $v_\pi\colon S\to \mathbb{R}$ (often called just value function) tells us the expected return of policy $\pi$ when starting in the state $s$.
+\[
+v_\pi(s) = \mathbb{E}_\pi [G_t|S_t=s]
+\]
+
+If we know the underlying MDP, we can simply calculate it directly using the Bellman equation:
+
+\[
+v_\pi(s) = \sum_a \pi(a|s) \cdot \sum_{s',r} p(s',r|s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
+\]
+
+Due to the recursive nature of this formula, it would be quite hard to calculate directly, so in practice an iterative algorithm is used that uses an already existing approximation for the next state. When we do not have access to the MDP we can use algorithms such as Monte Carlo learning or Temporal difference learning to approximate the state value function.
+
+\subsection{Action-value function}
+
+Knowing how well our policy performs in a state can be useful, but it does not help us decide which action we should take (unless we also know the transition function). The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ tells us the expected return of policy $\pi$ if we were to select action $a$ in state $s$ and then follow the policy.
+
+\[
+q_\pi(s,a) = \mathbb{E}_\pi [G_t|S_t=s,A_t=a]
+\]
+
+Knowing the action-value function can help us improve the policy. Algorithms, such as Q-learning, and DQN, are based on this principle.
+
+\subsection{Action-advantage function}
+
+Lastly, the advantage function $a_\pi$ is a modification of the action-value function that tells us how much better (or worse) it is to take an action $a$ in a state $s$ compared to following the policy:
+
+\[
+a_\pi(s,a) = q_\pi(s,a)-v_\pi(s)
+\]
+
+It does not really give us any new information compared to the action-value function (given we know the state-value function), but it allows us to compare the actions more easily.
 
 \section{Q-learning}
 Talk about Q-learning -- the simplest RL algorithm.
 
 \section{Exploration exploitation trade-off}
-Talk about why this is a problem and some solutions to fixing it.
+Talk about why this is a problem and some solutions to fixing it. (Chapter 4 of GDRL)
 
 \chapter{RL in practice}
 Talk about how RLs are trained, libraries, etc.
@@ -574,6 +610,16 @@ At first, I tried to use the same technique as before -- randomly attempting to 
 \end{figure}
 
 A new reward function was needed as well. I came up with the following method. First, find all objects that the guess intersects with or fully encloses; if there are none, also include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of the guess, and this object minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If there are multiple intersecting objects, then the one that is deepest in the hierarchy is chosen, and the same calculations are done. The episode ends when the root object is removed.
+
+I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about two. The transferred model did do better by around 25 percent but both did pretty bad. From the testing, it was clear that the model learned that placing long bounding boxes of width zero would almost always result in a nonnegative reward because the IoU of such bounding box is always zero, and the model did not explore enough to realize that it could do much better.
+
+To combat this, I tried modifying some hyperparameters that should encourage exploration, namely:
+\begin{itemize}
+    \item The discount factor $\gamma$ (described in section \ref{section:goal}) -- by default, this parameter is set to 0.99, but in our case, discounting does not really make sense. Because of how the environment is set up, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is not needed, and $\gamma$ should be set to 1.
+    \item Entropy loss coefficient $c_2$ -- in the PPO loss function contains an entropy bonus which rewards less deterministic policies. Increasing it should thus lead to more exploration \cite{PPO_paper}
+    \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents big updates to a policy, which should prevent it from \enquote{jumping off a cliff} \cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
+    \item Learning rate $\varepsilon$ -- When making an update to the policy network, the gradient is multiplied by this constant. Higher learning should make the training faster, but at the same time, the jumps are bigger which can lead to unstable learning.
+\end{itemize}
 
 \chapter{Comparison with other methods}
 
