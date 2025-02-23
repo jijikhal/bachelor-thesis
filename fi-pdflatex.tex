@@ -206,7 +206,7 @@ It should be mentioned that there are many possible extensions for MDPs that cou
 One extension that I want to talk about more is partially observable MDP (POMDP). As mentioned earlier, in most cases, the agent does not see the entire state of the MDP it interacts with, but only some part of it -- an observation. To account for this, we add two more properties into the tuple defining the MDP -- $\mathcal{O}$ and $\epsilon$. $\mathcal{O}$ is the set of all possible observations -- observation space. $\epsilon$ is a function $S \to \mathcal{D}(\mathcal{O})$ -- for a given state $s$ it returns a probability distribution over the observation space. However, to make things simpler, we will consider only regular MDPs for the rest of this chapter.
 
 \section{Policy}
-Now that we have formally defined the environment using a MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As already mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$, and since the ending state of one experience and the initial state of the following experience is always the same, we can write it only once: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\cdot A \cdot \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just won't give us any reward or transition the environment into a different state. History is then some prefix of trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\cdot A \cdot \mathbb{R})^{*}S$. The agent has to make the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\cdot A \cdot \mathbb{R})^{*}S \to \mathcal{D}(A)$, which returns a distribution over the action space based on the history up to that point \cite[p. 19]{PA230}.
+Now that we have formally defined the environment using a MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As already mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$, and since the ending state of one experience and the initial state of the following experience is always the same, we can write it only once: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\cdot A \cdot \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just won't give us any reward or transition the environment into a different state. History is then some prefix of trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\cdot A \cdot \mathbb{R})^{*}\cdot S$. The agent has to make the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\cdot A \cdot \mathbb{R})^{*}\cdot S \to \mathcal{D}(A)$, which returns a distribution over the action space based on the history up to that point \cite[p. 19]{PA230}.
 
 If we assume that the Markov property is fulfilled, we can simplify policy to just $\pi\colon S \to \mathcal{D}(A)$ because in that case, we know that the environment is memoryless, and thus, it does not matter how we ended up in the state $s_t$. Thanks to this, our agent (and its underlying policy) can be memoryless as well. Note that this is only true if we receive the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might help us differentiate between them).
 
@@ -226,9 +226,10 @@ Finally, the expected discounted cumulative reward. As stated before, the enviro
 
 \section{Value functions}
 
-For a given policy $\pi$, we can calculate value functions. These are functions that describe how well a policy does in some situation. They can be used to compare policies with one another or used for learning purposes.
+For a given policy $\pi$, we can calculate its value functions. These are functions that describe how this policy performs in some given environment. They can be used to compare policies with one another or used for learning purposes.
 
 \subsection{State-value function}
+\label{subsec:state_value_func}
 The state-value function $v_\pi\colon S\to \mathbb{R}$ (often called just value function) tells us the expected return of policy $\pi$ when starting in the state $s$.
 \[
 v_\pi(s) = \mathbb{E}_\pi [G_t|S_t=s]
@@ -240,11 +241,11 @@ If we know the underlying MDP, we can simply calculate it directly using the Bel
 v_\pi(s) = \sum_a \pi(a|s) \cdot \sum_{s',r} p(s',r|s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
 \]
 
-Due to the recursive nature of this formula, it would be quite hard to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used. When we do not have access to the MDP, we can use algorithms such as Monte Carlo or Temporal difference to approximate the state value function.
+Due to the recursive nature of this formula, it would be quite hard to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used (often called policy evaluation). When we do not have access to the MDP, we can use algorithms such as Monte Carlo or Temporal difference that repeatedly interact with the environment to collect experiences and then use this data to approximate the value functions.
 
 \subsection{Action-value function}
 
-Knowing how well our policy performs in a state can be useful, but it does not help us decide which action we should take (unless we also know the transition function). The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ tells us the expected return of policy $\pi$ if we were to select action $a$ in state $s$ and then follow the policy.
+Knowing how well our policy performs in a state can be useful, but it does not help us decide which action we should take (unless we also know the transition function). The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ tells us the expected return of policy $\pi$ if we were to select action $a$ in state $s$ and then follow the policy until we reach a terminal state.
 
 \[
 q_\pi(s,a) = \mathbb{E}_\pi [G_t|S_t=s,A_t=a]
@@ -262,11 +263,28 @@ a_\pi(s,a) = q_\pi(s,a)-v_\pi(s)
 
 It does not really give us any new information compared to the action-value function (given we know the state-value function), but it allows us to compare the actions more easily.
 
+\section{Exploration exploitation trade-off}
+As mentioned in subsection \ref{subsec:state_value_func}, many RL algorithms rely on approximating a value function using an iterative algorithm and then use this information to improve the policy. To make the approximation, they need to repeatedly interact with the environment and collect experiences. To create the best approximation, it would be best to run the policy from every single possible state and try every single possible action, ideally, many times to account for randomness. Obviously, this is not feasible for any environments that contain more than a few thousand states, and it is outright impossible for environments with continuous state or action spaces.
+
+Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation trade-off. Should we rather try completely new actions and risk wasting time on unproductive paths (explore), or stick to what we know works reasonably well, but risk completely missing some better strategies (exploit)? To measure how much of the training was \enquote{wasted} on exploring, we can use a metric called regret. To calculate regret $R$ at time $T$, we sum the differences between the expected reward given for the optimal action and the actual reward for the selected action for every step.
+
+\[
+R(T) = \sum_{t=1}^{T}(\mathbb{E}[r^*]-r_t)
+\]
+
+Note that the optimal strategy must be known to calculate the expected optimal reward ($\mathbb{E}[r^*]$). If it is not known, other strategies must be used.
+
+The goal is to find the optimal policy while maintaining the lowest total regret. To manage this trade-off effectively, various exploration strategies have been developed. Below are three commonly used approaches:
+
+\begin{itemize}
+    \item (Decaying) epsilon-greedy exploration strategy -- given some constant $\varepsilon \in [0,1]$, choose a random action with the probability of $\varepsilon$; otherwise, choose the action currently estimated to be the best. More commonly, $\varepsilon$ is not a constant, but instead, it gets lowered (decayed) as training progresses.
+    \item Upper confidence bound strategy -- when choosing which action to take next, we add a bonus to estimates with lower confidence (those, that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{e}}{N_e(a)+1}}$ where $c$ is some constant describing the importance of this bonus, $e$ is the episode number and $N_e(a)$ is how many times that action was already chosen (plus one to avoid division by zero).
+    \item Softmax exploration strategy -- (TODO: should I explain softmax or does everyone know it?) the chance of a certain action being selected is proportional to its action value estimate. To get the probabilities, we take the estimates and pass them through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. Of course, this would not work very well at the beginning when the estimates have high variance, so we also divided the estimates by a decaying hyper-parameter $\tau$ called temperature, which makes it so the estimates are less important at the beginning of the training.
+\end{itemize}
+
+
 \section{Q-learning}
 Talk about Q-learning -- the simplest RL algorithm.
-
-\section{Exploration exploitation trade-off}
-Talk about why this is a problem and some solutions to fixing it. (Chapter 4 of GDRL)
 
 \chapter{RL in practice}
 Talk about how RLs are trained, libraries, etc.
@@ -391,6 +409,7 @@ The best model was able to guess the position of the bounding box pretty well, u
 \end{figure}
 
 \subsection{Moving rectangle}
+\label{subsection:moving_rectangle}
 The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. \ref{fig:env2}
 
 \begin{figure}
@@ -633,27 +652,38 @@ To combat this, I tried modifying some hyperparameters that should encourage exp
     \item The discount factor $\gamma$ (described in section \ref{section:goal}) -- by default, this parameter is set to 0.99, but in our case, discounting does not really make sense. Because of how the environment is set up, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is not needed, and $\gamma$ should be set to 1.
     \item Entropy loss coefficient $c_2$ -- in the PPO loss function contains an entropy bonus which rewards less deterministic policies. Increasing it should thus lead to more exploration \cite{PPO_paper}
     \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents big updates to a policy, which should prevent it from \enquote{jumping off a cliff} \cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
-    \item Learning rate $\varepsilon$ -- When making an update to the policy network, the gradient is multiplied by this constant. Higher learning should make the training faster, but at the same time, the jumps are bigger which can lead to unstable learning.
+    \item Learning rate $\varepsilon$ -- When making an update to the policy network, the gradient is multiplied by this constant. Higher learning should make the training faster, but at the same time, the jumps are bigger, which can lead to unstable learning.
 \end{itemize}
+
+I tried both lowering and increasing each of these parameters but unfortunately, none of the changes had a bigger positive impact. Lowering $\gamma$ and increasing the clip range did lead to slightly better results but only by a little. This showed me that it might be better to try a completely different approach rather than trying to improve this one over and over with little to no success.
 
 \chapter{Training a model that predicts iteratively}
 \label{chap:iterative}
 
-Since the results of the previous approach which guessed bounding boxes directly (one action = one prediction) did not work well, especially in more complex environment I wanted to try a different approach. \cite{rl_object_detection} describes and compares two approaches for object detection using reinforcement learning, both using discrete action space (which should be a bit simpler for the model to learn). Both of these methods start with a bounding box spanning the entire image and the agent chooses actions to modify this box repeatedly until it is happy with the prediction at which point it selects the \texttt{trigger} action which ends the episode and grants the final reward.
+Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. \cite{rl_object_detection} describes and compares two approaches for object detection using reinforcement learning, both using discrete action space (which should be a bit simpler for the model to learn). Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this box repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward.
 
-The first method, originally described in \cite{hierarchical_od_with_drl}, has five movement actions (each results in zooming into a different 'quarter' of the image) and stop action. It showed promising results on a single object single class object detection but it is unusable for our purpose since it only produces bounding boxes with one fixed aspect ratio.
+The first method, originally described in \cite{hierarchical_od_with_drl}, has five movement actions (each results in zooming into a different 'quarter' of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with one fixed aspect ratio.
 
-The second method, originally described in \cite{iterative_od_with_rl}, uses similar approach but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger) four of which move the bounding box (up, down, left and right), and two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility although some bounding boxes are still impossible because the changes are of some fixed size but if this size is small enough we should be fine as we probably do not need pixel perfect predictions.
+The second method, originally described in \cite{iterative_od_with_rl}, uses a similar approach but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, we should be fine as we probably do not need pixel-perfect predictions.
 
-As for the observation space it is once again an image but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper \cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions but \cite{rl_object_detection} found that including them did not help.
+As for the observation space, it is once again an image, but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper \cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions but \cite{rl_object_detection} found that including them did not help.
 
 TODO add an image from the paper of the progression
 
-I implemented this approach in a simplified form as a proof of concept with only four actions, each of them shrinking the bounding box by some fixed percentage from on of the four sides and the trigger action. This simplifies the problem while keeping the ability to create predictions of any size.
+I implemented this approach in a simplified form as a proof of concept with only four actions, each of them shrinking the bounding box by some fixed percentage from one of the four sides and the trigger action. This simplifies the problem while keeping the ability to create predictions of any size.
 
-The suggested reward function compares the IoU of the state before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if it got worse. When the trigger action is taken a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$. \cite{rl_object_detection} further tried changing them but did not find any improvements when they were increased.
+The suggested reward function compares the IoU of the state before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if it got worse. When the trigger action is taken, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$. \cite{rl_object_detection} further tried changing them but did not find any improvements when they were increased.
 
-This reward function is good for single object detection because the correct action will always improve the IoU but when multiple objects are present and the calculation is more complicated than IoU this does not have to be the case. For this reason I started my PoC with a much simpler sparse reward function which only gives reward for the trigger action using the same calculation as in my previous environments.
+This reward function is good for single object detection because the correct action will always improve the IoU, but when multiple objects are present, and the calculation is more complicated than IoU, this does not have to be the case. For this reason, I started my PoC with a much simpler sparse reward function, which only gives a reward for the trigger action using the same calculation as in my previous environments.
+
+The first experiment I did was on one of the simplest environments I made, containing just one filled-in rectangle of variable size at variable position (described in \ref{subsection:moving_rectangle}). The model learned to find the rectangle pretty quickly, but the accuracy was not great, mainly because the bounding box modification step was too large (one step shrunk the bounding box by 15 \%). When I lowered it to just 5 \%, the accuracy improved, but it took way too many steps (around 60), which would later slow down the inference by a lot. For this reason, in the following environments, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a low amount of steps.
+
+I then moved on to the next environment described in \ref{subsec:multi-rect}, which contains multiple rectangles. With the default hyperparameters, it struggled, but when I tried running it with a higher clip range and lower gamma (as discovered in the previous chapter), all of a sudden, the results were much better. There was no big change when I changed the rectangles to be just outlines.
+
+With the hierarchical environment, it once again struggled, so since I saw how big of an impact hyperparameters can have, I decided to once again try to tune them. But this time not using just manual guessing but instead an automated process. The SB-3 documentation recommended to use the rl-zoo library, which contains pre-trained models, environments, and scripts for training and hyperparameter optimization. I tried using it but failed to use it for my more complicated network architecture. So instead I wrote my own script instead.
+
+\section{Optuna}
+Optimization framework
 
 \chapter{Comparison with other methods}
 TODO: Implement two solutions: one based on CNNs (probably YOLOv8 with some free dataset), one based on classical CV (finding contours).
