@@ -56,8 +56,8 @@
     author      = Jindřich Halabala,
     gender      = m,
     advisor     = {RNDr. Ondřej Krajíček},
-    title       = {UI element detection using reinforcement learning TODO},
-    TeXtitle    = {UI element detection using reinforcement learning TODO},
+    title       = {Hierarchical UI element detection using deep reinforcement learning},
+    TeXtitle    = {Hierarchical UI element detection using deep reinforcement learning},
     keywords    = {TODO, keyword2, ...},
     TeXkeywords = {TODO, keyword2, \ldots},
     abstract    = {%
@@ -107,43 +107,68 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-TODO: Theses are rumoured to be \enquote{the capstones of education}, so
-I decided to write one of my own. If all goes well, I will soon
-have a diploma under my belt. Wish me luck!
+This thesis attempts to implement a solution relying on a combination of both of these approaches using deep reinforcement learning. It is powered by a CNN making it, in theory, able to learn a lot but at the same time the training is done mainly using a CV based reward function, which should make it much easier to modify.
 
+\chapter{User interface element detection}
 
-\chapter{Introduction to object detection}
-Talk about AIVA, what is the goal of what I am making.
+Y Soft AIVA is a software solution for automated end-to-end testing of web applications. Unlike most competitors, AIVA does not interact with or read the Document Object Model (DOM) of a web page. Instead, it relies entirely on visual information. This approach closely resembles how a real user interacts with the application (black-box testing) and enhances robustness in certain scenarios, such as when XPaths change due to newly added components But it also presents many challenges since all the information has to be extracted from an image as opposed to structured text.
 
-\chapter{Existing solutions}
-\label{chapt:existing_solutions}
-Talk about existing solutions and why I decided to use reinforcement learning. Talk about existing RL-based object detectors.
+A crucial aspect of data extraction is identifying the location, size, and hierarchical relationships of all key interactable elements on a web page (e.g., buttons, icons, text fields). If this step is done well, it allows AIVA to essentially reconstruct the DOM and use it to localize correct elements during test execution.
 
-\chapter{Theory}
-Talk about the concept of reinforcement learning, Markov decision processes, Markov property, how the training works (state-value, action-value functions, advantage-value functions), exploration vs exploitation, Q-learning, Deep-Q-learning, Actor-Critic architecture, and other algorithms. 
+User interface (UI) object detection such as this is done either using traditional computer vision (CV) or by deep learning-based object detection models (R-CNN, YOLO, etc.) or by combining both (for example, using a DL model for text detection and CV for the rest) \cite{ODforGUI_CV_DL_or_both}. This chapter looks at both of these approaches, some existing solutions that use them, and the challenges they present. Finally, a third approach that could possibly solve these problems is proposed based on deep reinforcement learning.
+
+\section{Traditional computer vision-based solutions}
+
+Traditional computer vision is used in this thesis as a term for describing algorithms for digital image processing that do not utilize machine learning. They are not ideal for object detection in photographs due to noise and unclear edges, but they are well-suited for processing user interfaces. When using screenshots, we do not have to worry about noise (at most, some compression artifacts might be present), and edges are clearly defined.
+
+The most common technique is to use some edge detection method (e.g., Canny or Sobel edge detection) followed by some extra processing to make the found edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The result of this process is then commonly combined with results from an optical character recognition (OCR) model and further processed to merge similar elements, filter out very small elements, and so on. This exact process can be found in algorithms such as REMAUI \cite{remaui} (a program for reverse engineering of mobile application UIs), UISeg \cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
+
+Template matching is another approach for localization, but it lacks flexibility. It works well for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed UI) but is ineffective for mobile or web applications where UI components vary widely in design \cite{ODforGUI_CV_DL_or_both}.
+
+Even today, with the rapid progress in deep learning (DL), traditional CV still has many benefits. It can be much more efficient and simpler to understand, which also makes it much easier to modify and debug. We can observe the results of each step of an algorithm, see what went wrong, and adjust parameters and thresholds accordingly. This is not possible (or at least not simple to do) with DL. Another big benefit is not having to create a large dataset for training, which often requires a lot of manual labor, and even then, it could be of low quality, making it impossible to train a good model. This also makes CV-based solutions a lot more flexible -- trends in user interface design tend to change rather quickly, making older datasets obsolete  \cite{DLvsTCV}.
+
+\section{Deep learning-based solutions}
+In the last ten years or so, state-of-the-art object detection algorithms have been almost solely based on deep neural networks with convolutional layers. The two most prominent model families are Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO). Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case \cite{ObjectDetectionHistorySurvey}.
+
+An example of a deep learning-based UI element detection algorithm is OmniParser -- a fine-tuned YOLOv8 model for parsing and labeling UIs. It was created to improve the performance of large multi-modal agents like GPT-4V \cite{OmniParser}. \cite{GUI_YOLO_comparison} tried training different YOLO architectures for UI element detection with good results. Back when AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection \cite{Horak2020thesis}.
+
+A key advantage of DL-based solutions is that they do not require manual tuning for a specific domain. They can also detect complex patterns without explicit programming. With a large enough high-quality dataset and proper model architecture, almost anything can be learned automatically from the data. But as stated in the previous section, this is also one of the main drawbacks. It is also way more demanding on hardware, especially for training \cite{DLvsTCV}.
+
+\section{Object detection with reinforcement learning}
+
+The previous two sections highlight two big challenges. Traditional CV is not good enough for more complex images, and DL requires a large, high-quality dataset. What if we could somehow combine these two methods into one that eliminates or at least mitigates these drawbacks? It should be possible to create a function that judges the quality of a bounding box prediction based on traditional CV and then use it to train a DL model. This approach eliminates the need for a dataset with ground truth bounding boxes, requiring only images of web applications, which is significantly simpler to obtain.
+
+If we only have a numerical score for predictions rather than ground truth labels, supervised learning models are not applicable. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in \autoref{chap:dlr}).
+
+From my research, there have been no attempts at multi-object detection using reinforcement learning, although there have been attempts at using it to detect a single object in photographs \cite{dlr_object_detection, iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection \cite{drl_rpn}. All of them use ground-truth labels for learning, but I believe this is because creating a CV-based reward function for photographs would be very difficult, but for UIs, it should be feasible. 
+
+\chapter{Deep reinforcement learning}
+\label{chap:dlr}
+
+To understand the terminology used and decisions made in the following chapters, it is important to first have a basic understanding of the theory behind reinforcement learning and machine learning in general. This chapter should provide enough information to understand the rest of this thesis. Please note that this chapter is only a brief non-detailed introduction to the topic; only the most important algorithms and definitions are provided. It is definitely not exhaustive.
 
 \section{Machine learning}
-Machine learning is the study of algorithms that allow computers to learn from data without explicit programming \cite[p. 5]{IB031}. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning (note that other categories, such as semi-supervised learning or self-supervised learning, are also sometimes stated, but they are usually just a mixture of the three main categories).
+Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning (note that other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but they are usually just modifications of the three main categories) \cite{IB031}.
 
-In supervised learning (SL), the goal is to learn to label data when the correct labels are available during training. This is ideal for classification or regression, where we are able to get the correct labels (be it from human labeling or some other method).
-In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data which can be used to, for example, separate the data into groups (clustering) or to be able to generate new data similar to the existing data (some generative models such as autoencoders or GANs).
+In supervised learning (SL), the goal is to learn to make predictions when the correct answers are available during training. This is ideal for classification or regression, where we are able to get the correct labels (be it from human labeling, automated data collection, or some other method).
 
-Reinforcement learning (RL) may seem similar to SL because, again, the model is given some input data and tries to predict a label (an action). But unlike in SL, the algorithm is not given the correct answer after its prediction to learn. Instead, we have some mechanism (reward function) that is able to tell us how good or bad our prediction was. Our goal is to then learn to predict labels that will provide the biggest cumulative reward. This makes RL ideal for decision-making, especially in environments where we do not know the ideal strategy.
+In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This can be used to, for example, separate the data into groups (clustering) or to generate new data similar to the provided examples (autoencoders, generative adversarial networks).
+
+Reinforcement learning may seem similar to SL because, again, the model is given some input data and tries to predict a label (an action). But unlike in SL, the algorithm is not given the correct answer after its prediction to learn. Instead, we have some mechanism (a reward function) that is able to tell us how good or bad our prediction was. The goal is to then learn to predict labels that maximize this reward. This makes RL ideal for decision-making, especially in environments where we do not have access to the ideal strategy.
 
 \section{Reinforcement learning}
-Reinforcement learning problems are composed of two parts that interact with one another -- the agent and the environment. The agent is the algorithm we are trying to teach to make decisions. The environment is everything else -- if we are trying to make an algorithm that can drive a car, then the environment is all the other cars, how they move, all the roads, pedestrians, and also the car the agent is controlling. The agent interacts with the environment through its decisions and tries to do this in such a way that it is rewarded the most possible.
+Reinforcement learning problems are composed of two entities that interact -- the agent and the environment. The agent is the algorithm we are trying to teach to make decisions. The environment is everything else -- if the goal is to drive a car, then the environment is all the other cars, how they move, all the roads, pedestrians, but also the car the agent is controlling. The agent interacts with the environment through its decisions and tries to do this in such a way that maximizes the reward.
 
-We define the RL cycle. In the beginning, the environment is in some initial state. The agent observes the state and, based on this observation, decides to perform some action. The environment then reacts to this action, changing its state. The agent then observes the new state and also receives a reward based on the action. The agent can then change its behavior based on the reward. The agent then again chooses an action, and the cycle repeats as can be seen in figure \ref{fig:rl-cycle}.
+We define the RL cycle. In the beginning, the environment is in some initial state. The agent observes the state and, based on this observation, decides to perform an action. The environment then reacts to this action, changing its inner state. The agent then observes the new state and also receives a reward based on the action. The agent can then change its behavior based on the reward. It then again chooses an action, and the cycle repeats as can be seen in figure \ref{fig:rl-cycle}.
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.75\linewidth]{diagrams/rl-cycle.pdf}
+    \includegraphics[width=1\linewidth]{diagrams/rl_cycle.pdf}
     \caption{Reinforcement learning cycle}
     \label{fig:rl-cycle}
 \end{figure}
 
-
-Each one of these cycles is called a time step and creates an experience -- a tuple of the original state, the action taken, the reward given, and the new state. When this cycle stops depends on the task and whether it has an end. For example, in a game of chess, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences from the initial state to the end form an episode. If there is no well-defined end, we call a task continuous. For example when we teach a robot to walk there is no goal, we just want it to walk the furthest or the fastest.
+One iteration of this cycle is called a time step and creates an experience -- a tuple of the original state, the action taken, the reward given, and the new state. When this cycle stops depends on the task and whether it has an end. For example, in a game of chess, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences from the initial state to the end form an episode. If there is no well-defined end, we call a task continuous. For example when we teach a robot to walk there is no goal, we just want it to walk the furthest or the fastest.
 
 Compared to supervised learning, this poses many more challenges. Namely, RL feedback is sequential, evaluative, and sampled.
 
@@ -188,7 +213,7 @@ Simple MDPs can be visualized as diagrams, as can be seen in figure \ref{fig:mdp
 
 \begin{figure}
     \centering
-    \includegraphics[width=0.75\linewidth]{diagrams/mdp.pdf}
+    \includegraphics[width=1\linewidth]{diagrams/mdp.pdf}
     \caption{Markov decision process. Terminal states are depicted by squares. Transition probabilities are purple; rewards are green.}
     \label{fig:mdp}
 \end{figure}
@@ -278,13 +303,23 @@ The goal is to find the optimal policy while maintaining the lowest total regret
 
 \begin{itemize}
     \item (Decaying) epsilon-greedy exploration strategy -- given some constant $\varepsilon \in [0,1]$, choose a random action with the probability of $\varepsilon$; otherwise, choose the action currently estimated to be the best. More commonly, $\varepsilon$ is not a constant, but instead, it gets lowered (decayed) as training progresses.
-    \item Upper confidence bound strategy -- when choosing which action to take next, we add a bonus to estimates with lower confidence (those, that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{e}}{N_e(a)+1}}$ where $c$ is some constant describing the importance of this bonus, $e$ is the episode number and $N_e(a)$ is how many times that action was already chosen (plus one to avoid division by zero).
-    \item Softmax exploration strategy -- (TODO: should I explain softmax or does everyone know it?) the chance of a certain action being selected is proportional to its action value estimate. To get the probabilities, we take the estimates and pass them through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. Of course, this would not work very well at the beginning when the estimates have high variance, so we also divided the estimates by a decaying hyper-parameter $\tau$ called temperature, which makes it so the estimates are less important at the beginning of the training.
+    \item Upper confidence bound strategy -- when choosing which action to take next, we add a bonus to estimates with lower confidence (those that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{t}}{N_t(a)+1}}$ where $c$ is some constant describing the importance of this bonus, $t$ is the episode number and $N_t(a)$ is how many times that action was already chosen (plus one to avoid division by zero).
+    \item Softmax exploration strategy -- the chance of a certain action being selected is proportional to its action value estimate. To get the probabilities, we take the estimates and pass them through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. The softmax function is defined as $\sigma (v)_i = \frac{e^{v_i}}{\sum^{K}_{j=1}e^{v_j}}$ for the $i$-th value of a vector $v$ with $K$ elements. Of course, this would not work very well at the beginning when the estimates have high variance, so we also divided the estimates by a decaying hyper-parameter $\tau$ called temperature, which makes it so the estimates are less important at the beginning of the training.
 \end{itemize}
 
 
-\section{Q-learning}
-Talk about Q-learning -- the simplest RL algorithm.
+\section{Algorithms}
+
+\subsection{Tabular algorithms}
+The simplest reinforcement learning algorithms do not use deep neural networks. Instead, they approximate the action-value function using a table (thus tabular) in which they store the current approximations of each state-action pair.
+
+There are many different algorithms utilizing this principle. They differ in the way they calculate the approximations (Temporal difference, Monte-Carlo, $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategy. There are also some more advanced algorithms that approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
+
+While they can work very well for simple environments, they are unusable for any more complex environment with many possible states or actions and also do not allow for continuous states or actions because it would be impossible to have a table with every possible combination. Even for just a 100 by 100 pixel binary image, this would need a table of over $10^{72247}$ numbers.
+
+\subsection{NN-based algorithms}
+
+\subsection{Actor-critic algorithms}
 
 \chapter{RL in practice}
 Talk about how RLs are trained, libraries, etc.
@@ -664,11 +699,16 @@ Since the results of the previous approach, which guessed bounding boxes directl
 
 The first method, originally described in \cite{hierarchical_od_with_drl}, has five movement actions (each results in zooming into a different 'quarter' of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with one fixed aspect ratio.
 
-The second method, originally described in \cite{iterative_od_with_rl}, uses a similar approach but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, we should be fine as we probably do not need pixel-perfect predictions.
+The second method, originally described in \cite{iterative_od_with_rl}, uses a similar approach but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, we should be fine as we probably do not need pixel-perfect predictions. An example of one episode can be seen in figure \ref{fig:exmaple_from_paper}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/45.jpg}
+    \caption{Example of taken actions to locate and object \cite{iterative_od_with_rl}}
+    \label{fig:exmaple_from_paper}
+\end{figure}
 
 As for the observation space, it is once again an image, but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper \cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions but \cite{rl_object_detection} found that including them did not help.
-
-TODO add an image from the paper of the progression
 
 I implemented this approach in a simplified form as a proof of concept with only four actions, each of them shrinking the bounding box by some fixed percentage from one of the four sides and the trigger action. This simplifies the problem while keeping the ability to create predictions of any size.
 
@@ -680,10 +720,27 @@ The first experiment I did was on one of the simplest environments I made, conta
 
 I then moved on to the next environment described in \ref{subsec:multi-rect}, which contains multiple rectangles. With the default hyperparameters, it struggled, but when I tried running it with a higher clip range and lower gamma (as discovered in the previous chapter), all of a sudden, the results were much better. There was no big change when I changed the rectangles to be just outlines.
 
-With the hierarchical environment, it once again struggled, so since I saw how big of an impact hyperparameters can have, I decided to once again try to tune them. But this time not using just manual guessing but instead an automated process. The SB-3 documentation recommended to use the rl-zoo library, which contains pre-trained models, environments, and scripts for training and hyperparameter optimization. I tried using it but failed to use it for my more complicated network architecture. So instead I wrote my own script instead.
+With the hierarchical environment, it once again struggled, so since I saw how big of an impact hyperparameters can have, I decided to once again try to tune them. But this time not using just manual guessing but instead an automated process. The SB-3 documentation recommended to use the rl-zoo library, which contains pre-trained models, environments, and scripts for training and hyperparameter optimization. I tried using it but failed to use it for my more complicated network architecture. So instead I wrote my own script.
 
 \section{Optuna}
-Optimization framework
+Optuna\footnote{\url{https://optuna.org/}} is an open source framework for automated hyperparameter search. It uses state of the art algorithms to suggest hypermarameters based on previous experiences making it much more time efficient than usual methods such as grid-search. 
+
+Using it is very simple. You just need to define an \texttt{objective} function that takes a \texttt{trial} object as input, uses this trial object with methods like \texttt{trial.suggest\_int} or \texttt{trial.suggest\_categorical} to get the suggested hyperparameters and returns a float representing how well the objective was met (this is most often some accuracy metric, in our case it is the mean per episode reward). A study is then created using the \texttt{optuna.create\_study} function. This study can then be optimized for some amount of trails after which it returns the best found hyperparameters.
+
+A study can also be connected to a relational database where it logs all the trails. This can be then fed to Optuna dashboard\footnote{\url{https://optuna-dashboard.readthedocs.io/en/latest/getting-started.html}} which can visualize information such as hyperparameter importance, plots of the tuning progression and much more.
+
+It is also possible to run multiple Optuna instances in parallel, all using the same database, which allows for very simple way of distributed tuning on multiple machines with almost linear scaling.
+
+Another great feature is the possibility of pruning. In cases where the objective function has some intermediate values (for example accuracy after each epoch), Optuna can stop the trail early when the results after some amount of training are not close to the current best which greatly reduces the overall tuning time.
+
+I ran a study of around 100 trails each consisting of at most 200,000 episodes reporting intermediate values every 20,000 episodes. On two computers this took around 6 hours. The progress can be seen in figure \ref{fig:optuna-progress}. Optuna was allowed to tune almost every possible hyperparameter of the PPO algorithm including things like size of the actor and critic networks. From the results it was clear that learning rate made the biggest difference. Up until this point I only used fixed learning rate but Optuna found much better results using linear decaying learning rate.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/optuna_progress.png}
+    \caption{Progress of hyperparameter tunning with Optuna}
+    \label{fig:optuna-progress}
+\end{figure}
 
 \chapter{Comparison with other methods}
 TODO: Implement two solutions: one based on CNNs (probably YOLOv8 with some free dataset), one based on classical CV (finding contours).
