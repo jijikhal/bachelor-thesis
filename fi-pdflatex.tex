@@ -52,12 +52,12 @@
     university  = mu,
     faculty     = fi,
     type        = bc,
-    department  =,
+    department  ={Department of Computer Systems and Communications},
     author      = Jindřich Halabala,
     gender      = m,
     advisor     = {RNDr. Ondřej Krajíček},
-    title       = {Hierarchical UI element detection using deep reinforcement learning},
-    TeXtitle    = {Hierarchical UI element detection using deep reinforcement learning},
+    title       = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
+    TeXtitle    = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
     keywords    = {TODO, keyword2, ...},
     TeXkeywords = {TODO, keyword2, \ldots},
     abstract    = {%
@@ -107,59 +107,70 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-This thesis attempts to implement a solution relying on a combination of both of these approaches using deep reinforcement learning. It is powered by a CNN making it, in theory, able to learn a lot but at the same time the training is done mainly using a CV based reward function, which should make it much easier to modify.
+TODO
 
 \chapter{User interface element detection}
 
-Y Soft AIVA is a software solution for automated end-to-end testing of web applications. Unlike most competitors, AIVA does not interact with or read the Document Object Model (DOM) of a web page. Instead, it relies entirely on visual information. This approach closely resembles how a real user interacts with the application (black-box testing) and enhances robustness in certain scenarios, such as when XPaths change due to newly added components But it also presents many challenges since all the information has to be extracted from an image as opposed to structured text.
+Y Soft AIVA\footnote{\url{https://www.ysoft.com/aiva}} is a software solution for automated end-to-end testing of web applications. Unlike most competitors, AIVA does not interact with or read a web page's Document Object Model (DOM). Instead, it relies entirely on visual information. This approach closely resembles how a real user interacts with the application (black-box testing) and enhances robustness in specific scenarios, such as when XPaths change due to newly added components. However, it also presents many challenges since all the information must be extracted from an image instead of a markup language.
 
-A crucial aspect of data extraction is identifying the location, size, and hierarchical relationships of all key interactable elements on a web page (e.g., buttons, icons, text fields). If this step is done well, it allows AIVA to essentially reconstruct the DOM and use it to localize correct elements during test execution.
+A crucial aspect of data extraction is identifying the location, size, and hierarchical relationships of all key interactable elements on a web page (e.g., buttons, icons, text fields). If this step is done well, it allows AIVA to reconstruct the DOM and localize correct elements during test execution.
 
-User interface (UI) object detection such as this is done either using traditional computer vision (CV) or by deep learning-based object detection models (R-CNN, YOLO, etc.) or by combining both (for example, using a DL model for text detection and CV for the rest) \cite{ODforGUI_CV_DL_or_both}. This chapter looks at both of these approaches, some existing solutions that use them, and the challenges they present. Finally, a third approach that could possibly solve these problems is proposed based on deep reinforcement learning.
+This process can be approached using both detection and segmentation, as most objects on a webpage are rectangular. However, due to the hierarchical nature of the DOM, detection is a more intuitive choice, as a single pixel can belong to multiple overlapping elements. That said, the detected information can be converted into a segmentation map if needed. This correspondence is visible in \autoref{fig:example-result}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/result_example.pdf}
+    \caption{An example of an ideal result. The top image is the original screenshot, the bottom left shows bounding boxes of detection, and the bottom right shows the same as a segmentation map. The original image comes from \cite{aydos2020}.}
+    \label{fig:example-result}
+\end{figure}
+
+User interface (UI) object detection such as this is done either using traditional computer vision (CV) or by deep learning-based object detection models such as R-CNNs or YOLO or by combining both (for example, using a DL model for text and image detection and CV for the rest) \cite{ODforGUI_CV_DL_or_both}. This chapter looks at both approaches, some existing solutions based upon them, and the challenges they present. Finally, a third approach that could solve these problems is proposed based on deep reinforcement learning.
 
 \section{Traditional computer vision-based solutions}
 
-Traditional computer vision is used in this thesis as a term for describing algorithms for digital image processing that do not utilize machine learning. They are not ideal for object detection in photographs due to noise and unclear edges, but they are well-suited for processing user interfaces. When using screenshots, we do not have to worry about noise (at most, some compression artifacts might be present), and edges are clearly defined.
+Traditional computer vision is used in this thesis to describe algorithms for digital image processing that do not utilize machine learning, instead operating on a pixel-by-pixel basis. Tradition CV is not ideal for object detection in photographs due to noise and unclear edges but is well-suited for processing user interfaces. Screenshots usually do not contain any noise (at most, some compression artifacts might be present), and edges are clearly defined.
 
-The most common technique is to use some edge detection method (e.g., Canny or Sobel edge detection) followed by some extra processing to make the found edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The result of this process is then commonly combined with results from an optical character recognition (OCR) model and further processed to merge similar elements, filter out very small elements, and so on. This exact process can be found in algorithms such as REMAUI \cite{remaui} (a program for reverse engineering of mobile application UIs), UISeg \cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
+The most common technique is using an edge detection method (e.g., Canny or Sobel edge detection) followed by some extra processing to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. This process is then commonly combined with results from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. We can find this exact process in algorithms such as REMAUI \cite{remaui} (a program for reverse engineering of mobile application UIs), UISeg \cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
 
-Template matching is another approach for localization, but it lacks flexibility. It works well for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed UI) but is ineffective for mobile or web applications where UI components vary widely in design \cite{ODforGUI_CV_DL_or_both}.
+Template matching is another approach for localization, but it lacks flexibility. It works well for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed UI). However, it is ineffective for mobile or web applications where UI components vary widely in design \cite{ODforGUI_CV_DL_or_both}.
 
-Even today, with the rapid progress in deep learning (DL), traditional CV still has many benefits. It can be much more efficient and simpler to understand, which also makes it much easier to modify and debug. We can observe the results of each step of an algorithm, see what went wrong, and adjust parameters and thresholds accordingly. This is not possible (or at least not simple to do) with DL. Another big benefit is not having to create a large dataset for training, which often requires a lot of manual labor, and even then, it could be of low quality, making it impossible to train a good model. This also makes CV-based solutions a lot more flexible -- trends in user interface design tend to change rather quickly, making older datasets obsolete  \cite{DLvsTCV}.
+Even today, with the rapid progress in deep learning (DL), traditional CV still has many benefits. It can be much more efficient and straightforward to understand, making it much easier to modify and debug. We can observe the results of each step of an algorithm, see what went wrong, and adjust parameters and thresholds accordingly. These sorts of modifications are not possible (or at least not simple to do) with DL. Another significant benefit is not having to create a large dataset for training, which often requires a lot of manual labor, and even then, it could be of low quality, making it impossible to train a good model. This also makes CV-based solutions a lot more flexible -- trends in user interface design tend to change rather quickly, making older datasets obsolete  \cite{DLvsTCV}.
 
 \section{Deep learning-based solutions}
-In the last ten years or so, state-of-the-art object detection algorithms have been almost solely based on deep neural networks with convolutional layers. The two most prominent model families are Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO). Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case \cite{ObjectDetectionHistorySurvey}.
+In the last ten years, state-of-the-art object detection algorithms have been almost solely based on deep neural networks with convolutional layers. Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO) are the two most prominent model families. Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case \cite{ObjectDetectionHistorySurvey}.
 
-An example of a deep learning-based UI element detection algorithm is OmniParser -- a fine-tuned YOLOv8 model for parsing and labeling UIs. It was created to improve the performance of large multi-modal agents like GPT-4V \cite{OmniParser}. \cite{GUI_YOLO_comparison} tried training different YOLO architectures for UI element detection with good results. Back when AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection \cite{Horak2020thesis}.
+An example of a deep learning-based UI element detection algorithm is OmniParser -- a fine-tuned YOLOv8 model for parsing and labeling UIs. It was created to improve the performance of large multi-modal agents like GPT-4V \cite{OmniParser}. \cite{GUI_YOLO_comparison} tried training different YOLO architectures for UI element detection with good results. When AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection \cite{Horak2020thesis}.
 
-A key advantage of DL-based solutions is that they do not require manual tuning for a specific domain. They can also detect complex patterns without explicit programming. With a large enough high-quality dataset and proper model architecture, almost anything can be learned automatically from the data. But as stated in the previous section, this is also one of the main drawbacks. It is also way more demanding on hardware, especially for training \cite{DLvsTCV}.
+A key advantage of DL-based solutions is that they do not require manual tuning for a specific domain. They can also detect complex patterns without explicit programming. With a large enough high-quality dataset and proper model architecture, almost anything can be learned automatically from the data. However, as stated in the previous section, this is also one of the main drawbacks. It is also way more demanding on hardware, especially for training \cite{DLvsTCV}.
 
 \section{Object detection with reinforcement learning}
 
-The previous two sections highlight two big challenges. Traditional CV is not good enough for more complex images, and DL requires a large, high-quality dataset. What if we could somehow combine these two methods into one that eliminates or at least mitigates these drawbacks? It should be possible to create a function that judges the quality of a bounding box prediction based on traditional CV and then use it to train a DL model. This approach eliminates the need for a dataset with ground truth bounding boxes, requiring only images of web applications, which is significantly simpler to obtain.
+The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and DL requires a large, high-quality dataset. Could we somehow combine these two methods to eliminate or at least mitigate these drawbacks? It should be possible to create a function that judges the quality of a bounding box prediction based on traditional CV and then use it to train a DL model. This approach eliminates the need for a dataset with ground truth bounding boxes, requiring only images of web applications, which are significantly simpler to obtain.
 
-If we only have a numerical score for predictions rather than ground truth labels, supervised learning models are not applicable. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in \autoref{chap:dlr}).
+Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in \autoref{chap:dlr}).
 
-From my research, there have been no attempts at multi-object detection using reinforcement learning, although there have been attempts at using it to detect a single object in photographs \cite{dlr_object_detection, iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection \cite{drl_rpn}. All of them use ground-truth labels for learning, but I believe this is because creating a CV-based reward function for photographs would be very difficult, but for UIs, it should be feasible. 
+My research shows that there have been no attempts at multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs \cite{dlr_object_detection, iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection \cite{drl_rpn}. They all use ground-truth labels for learning, but I believe this is because creating a CV-based reward function for photographs would be very difficult. However, for UIs, it should be feasible. 
 
 \chapter{Deep reinforcement learning}
 \label{chap:dlr}
 
-To understand the terminology used and decisions made in the following chapters, it is important to first have a basic understanding of the theory behind reinforcement learning and machine learning in general. This chapter should provide enough information to understand the rest of this thesis. Please note that this chapter is only a brief non-detailed introduction to the topic; only the most important algorithms and definitions are provided. It is definitely not exhaustive.
+To understand the terminology used and decisions made in the following chapters, it is important to first have a basic understanding of the theory behind reinforcement learning and machine learning in general. This chapter should provide enough information to understand the rest of this thesis. Please note that it is only a brief introduction to the topic; only the most important algorithms and definitions are provided. It is definitely not exhaustive.
+
+Unless stated otherwise, the notation and information used in this chapter are from the book \textit{Grokking Deep Reinforcement Learning} by Miguel Morales \cite{GDRL}.
 
 \section{Machine learning}
 Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning (note that other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but they are usually just modifications of the three main categories) \cite{IB031}.
 
-In supervised learning (SL), the goal is to learn to make predictions when the correct answers are available during training. This is ideal for classification or regression, where we are able to get the correct labels (be it from human labeling, automated data collection, or some other method).
+In supervised learning (SL), the goal is to learn to make predictions when the correct answers are available during training. This is ideal for classification or regression, where we are able to get the correct labels (be it from human labeling, automated data collection, or some other method) \cite{IB031}.
 
-In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This can be used to, for example, separate the data into groups (clustering) or to generate new data similar to the provided examples (autoencoders, generative adversarial networks).
+In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This can be used to, for example, separate the data into groups (clustering) or to generate new data similar to the provided examples (autoencoders, generative adversarial networks) [ZDROJ???? Asi IB031 pro definici a PV021 pro příklady].
 
-Reinforcement learning may seem similar to SL because, again, the model is given some input data and tries to predict a label (an action). But unlike in SL, the algorithm is not given the correct answer after its prediction to learn. Instead, we have some mechanism (a reward function) that is able to tell us how good or bad our prediction was. The goal is to then learn to predict labels that maximize this reward. This makes RL ideal for decision-making, especially in environments where we do not have access to the ideal strategy.
+Just like SL, reinforcement learning predicts labels for some input data, but unlike in SL, the correct answers are not known. Instead, the learning is done using a reward function, which is able to score how good or bad the prediction was. The goal is to then learn to make decisions that maximize this reward through trail and error. This makes RL ideal for decision-making, especially in environments where we do not have access to the optimal strategy.
 
 \section{Reinforcement learning}
 Reinforcement learning problems are composed of two entities that interact -- the agent and the environment. The agent is the algorithm we are trying to teach to make decisions. The environment is everything else -- if the goal is to drive a car, then the environment is all the other cars, how they move, all the roads, pedestrians, but also the car the agent is controlling. The agent interacts with the environment through its decisions and tries to do this in such a way that maximizes the reward.
 
-We define the RL cycle. In the beginning, the environment is in some initial state. The agent observes the state and, based on this observation, decides to perform an action. The environment then reacts to this action, changing its inner state. The agent then observes the new state and also receives a reward based on the action. The agent can then change its behavior based on the reward. It then again chooses an action, and the cycle repeats as can be seen in figure \ref{fig:rl-cycle}.
+We define the RL cycle. In the beginning, the environment is in some initial state. The agent observes the state and, based on this observation, decides to perform an action. The environment then reacts to this action, changing its inner state. The agent then observes the new state and also receives a reward based on the action. The agent can then learn and change its behavior based on the reward. It then again chooses an action, and the cycle repeats as can be seen in figure \ref{fig:rl-cycle}.
 
 \begin{figure}
     \centering
@@ -168,15 +179,15 @@ We define the RL cycle. In the beginning, the environment is in some initial sta
     \label{fig:rl-cycle}
 \end{figure}
 
-One iteration of this cycle is called a time step and creates an experience -- a tuple of the original state, the action taken, the reward given, and the new state. When this cycle stops depends on the task and whether it has an end. For example, in a game of chess, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences from the initial state to the end form an episode. If there is no well-defined end, we call a task continuous. For example when we teach a robot to walk there is no goal, we just want it to walk the furthest or the fastest.
+One iteration of this cycle is called a time step and creates an experience -- a tuple of the original state $s$, the action taken $a$, the reward given $r$, and the new state $s'$. Depending on the task this cycle can repeat forever or end, once the environment reaches some terminal state. For example, in a game of chess, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences collected from the initial to the terminal states form an episode. If there is no well-defined end, we call a task continuous. For example when we teach a robot to walk there is no goal, we just want it to walk the furthest or the fastest.
 
-Compared to supervised learning, this poses many more challenges. Namely, RL feedback is sequential, evaluative, and sampled.
+Reinforcement learning is challenging due to the feedback being sequential, evaluative, and sampled.
 
-Feedback being sequential means that most of the tasks we encounter will be multiple steps long, and thus, the consequences of an action might not be apparent immediately. In the car driving example, if we turn the steering wheel and sway into the other lane, we probably won’t get hit immediately, but after a couple of seconds, thus it might not be obvious that the wheel turning is responsible for the low reward caused by crashing and not some other action we took right before the crash. Of course, continuous tasks are often solved by supervised learning models (time series prediction, large language models, etc.), but in these cases, we know the correct answers, so the model is usually punished right away.
+The sequentiality comes from most of the tasks being multiple steps long, and thus, the consequences of an action might not be apparent immediately. When an episode ends with a very negative result it can be hard to figure out which of the preceding actions is the cause as it often is not the last action taken.
 
-Feedback being evaluative means that the reward given is just a number. If we get a reward of let’s say 5, what does it mean? Is that good? Is it bad? We have no idea (unless we know the reward function). This leads to the need for exploration; more on this later.
+Feedback being evaluative means that the reward given is just a number. Without additional context it is impossible to know if the received reward was the best possible and we should thus repeat the decision in similar states or whether it was terrible and should be avoided in future. This leads to the need for exploration discussed in \autoref{sec:eplor-exploit}.
 
-Lastly, sampled feedback. We only know the reward we received for the states and actions we actually tried, and in most cases, there are so many states that it is impossible to try every combination of state and action. Also, often the observation does not contain the entire state; for example, in our car driving example, the agent will only receive information from the cameras and the sensors on the car, but these will never be able to see everything, and there is no way to see in the minds of the other drivers who are also part of the environment. Of course, this is a problem even in supervised learning, as the dataset will never contain all the data that we might encounter in the future. \cite{GDRL}
+Lastly, sampled feedback. We only know the reward we received for the states and actions we actually tried, and in most cases, there are so many states that it is impossible to try every combination of state and action. Also, often the observation does not contain the entire state; only some part of it. Of course, this is a problem even in supervised learning, as the dataset will never contain all the data that we might encounter in the future.
 
 \section{Markov decision process}
 In order to formally define RL and its goal, we first have to formally define the environment. There are multiple ways in which we can define an environment, but the most common representation is a Markov decision process (MDP). Formally, MDP is defined as a tuple $(S, A, p, r)$.
@@ -289,6 +300,7 @@ a_\pi(s,a) = q_\pi(s,a)-v_\pi(s)
 It does not really give us any new information compared to the action-value function (given we know the state-value function), but it allows us to compare the actions more easily.
 
 \section{Exploration exploitation trade-off}
+\label{sec:eplor-exploit}
 As mentioned in subsection \ref{subsec:state_value_func}, many RL algorithms rely on approximating a value function using an iterative algorithm and then use this information to improve the policy. To make the approximation, they need to repeatedly interact with the environment and collect experiences. To create the best approximation, it would be best to run the policy from every single possible state and try every single possible action, ideally, many times to account for randomness. Obviously, this is not feasible for any environments that contain more than a few thousand states, and it is outright impossible for environments with continuous state or action spaces.
 
 Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation trade-off. Should we rather try completely new actions and risk wasting time on unproductive paths (explore), or stick to what we know works reasonably well, but risk completely missing some better strategies (exploit)? To measure how much of the training was \enquote{wasted} on exploring, we can use a metric called regret. To calculate regret $R$ at time $T$, we sum the differences between the expected reward given for the optimal action and the actual reward for the selected action for every step.
@@ -322,34 +334,36 @@ While they can work very well for simple environments, they are unusable for any
 \subsection{Actor-critic algorithms}
 
 \chapter{RL in practice}
-Talk about how RLs are trained, libraries, etc.
+
+The previous chapter briefly explained the theory and terminology behind RL. This chapter follows up with an introduction to libraries and how RL agents are trained in code so that the source code for this thesis is understandable.
+
+As with most machine learning tasks, Python is the most popular programming language for RL, which is why I decided to use it in this thesis. AIVA is written mostly in .NET, but this should not be a problem since most machine learning libraries allow export into a common format such as ONNX, so that agents trained in Python can also be run natively in most other programming languages. [TODO: Je potřeba zdroj? Je potřeba poznámka pod čarou s odkazem na Python, .NET a ONNX?]
 
 \section{Gymnasium}
 \label{section:gym}
-More about gymnasium -- library for defining environments TODO
+Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of RL environments. It is a maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Its main purpose is to define a unified environment API, but it also contains many wrappers that simplify processes such as normalization, clipping, recording of the training, or vectorization of parallel training. It also provides many predefined environments that can be used to test new RL algorithms. The information in this section is from the official Gymnasium documentation \cite{gym-docs}.
 
-Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of reinforcement learning environments. It is a maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Other than the creation of environments, it also contains many wrappers for environments that make it much easier to do things like normalization, clipping, recording of the training, or vectorization of parallel training. It also provides many predefined environments that can be used to test new RL algorithms.
-
-To create a new environment, you need to define a Python class that inherits from the \texttt{gymnasium.Env} class. As a part of this class, you need to define your action and observation spaces as well as a couple of methods for interaction with your environment. Gymnasium provides the following options for your spaces:
+An environment is a Python class that inherits from the \texttt{gymnasium.Env} class. Inside the initialization method of this class, the observation and action space types must be defined. Gymnasium provides the following types of spaces:
 
 \begin{itemize}
-    \item \texttt{Box} -- represents a tensor (n-dimensional matrix of numbers) of a fixed shape. the numbers inside can be both bounded (in some specified range) or unbounded. This type is useful for a representation of images or continuous actions.
+    \item \texttt{Box} -- represents a tensor ($n$-dimensional matrix of numbers) of a fixed shape. the numbers inside can be both bounded and unbounded. This type is useful for a representation of images or continuous actions.
     \item \texttt{Discrete} -- represents a space of finitely many integers. This is especially useful for discrete action spaces and acts essentially as an enum.
-    \item \texttt{MultiBinary} -- tensor of boolean values
-    \item \texttt{MultiDiscrete} -- tensor of discrete values. Is useful when your action space is discrete, but more than one action can be done at the same time (for example, on a game console, a move direction is pressed, but the jump button can be pressed as well)
-    \item \texttt{Text} -- prostě text xd
+    \item \texttt{MultiBinary} -- tensor of boolean values.
+    \item \texttt{MultiDiscrete} -- tensor of discrete values. 
+    \item \texttt{Text} -- a string composed of specified characters.
     \item Composite spaces -- multiple fundamental spaces can be combined into a \texttt{Dictionary}, \texttt{Tuple}, \texttt{Sequence} of variable length, a \texttt{Graph} or a \texttt{Union}.
 \end{itemize}
 
-Once the observation space and action space are defined, you need to implement the following methods:
+The environment class also requires the following methods to be implemented:
 
 \begin{itemize}
-    \item \texttt{reset} -- when called, resets the environment into a random initial state and returns the first observation
-    \item \texttt{step} -- takes an action as its argument and executes it. It then returns a new observation, reward for the action, and whether the episode ended (be it due to termination or some other reason like timeout)
-    \item \texttt{render} -- an optional method that can be used to inform a user about the current state. Useful for debugging or when you want to record the training progress
+    \item \texttt{reset} -- called to begin a new episode. It resets the environment to an initial state and returns the initial observation and a dictionary with auxiliary information for debugging or other purposes. It takes a seed value as an optional parameter.
+    \item \texttt{step} -- performs a single time step of the environment. Its only input is the action decided by the agent, which has to adhere to the type defined in the initialization method. It transitions the environment to a new state, returning the new observation, the reward awarded for taking the action, whether the reached state was terminal, whether the episode was truncated (e.g. due to reaching a time limit), and again, a dictionary with auxiliary information.
+    \item \texttt{render} -- a method for getting the current state of the environment in a human-friendly format. Each environment can define multiple modes in its metadata, one of which can then be selected during initialization. Most common formats include an RGB frame, text, or a list of RGB frames.
+    \item \texttt{close} -- a clean up method. Should close render windows, end database connections, etc.
 \end{itemize}
 
-Once an environment is defined, it can be registered and then created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a RL algorithm.
+Once an environment is defined, it should be registered using the \texttt{gymnasium.envs.registration.register} function, which allows it to be later created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a RL algorithm.
 
 \section{Stable-Baselines 3}
 Stable-Baselines 3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} (SB-3) is a Python library containing implementations of RL algorithms. It started as a maintained fork of the OpenAI Baselines library, but now it contains many more new algorithms, better API, and documentation. The algorithms are built on top of PyTorch, which allows for simple modifications of the underlying neural networks. The algorithms interact with environments defined using the Gymnasium API described in \autoref{section:gym}.
