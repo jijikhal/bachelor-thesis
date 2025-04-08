@@ -2,12 +2,12 @@ This file serves as a place to note down what acronyms were used where so that I
 
 # User interface element detection
 - DOM -- Document object model
-- UI -- user interface
+- GUI -- Graphical user interface
 - CV -- computer vision
+- DL -- deep learning
 
 ## Traditional computer vision-based solutions
 - OCR -- optical character recognition
-- DL -- deep learning
 
 ## Deep learning-based solutions
 - R-CNN -- Region-based Convolutional Neural Network
@@ -21,3 +21,7 @@ This file serves as a place to note down what acronyms were used where so that I
 - SL -- supervised learning
 - UL -- unsupervised learning
 - RL -- reinforcement learning
+
+# RL in practice
+## SB3
+- SB3 -- Stable-baselines3
