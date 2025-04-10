@@ -139,7 +139,7 @@ Even today, with the rapid progress in deep learning, traditional CV still offer
 \section{Deep learning-based solutions}
 In the last ten years, state-of-the-art object detection algorithms have been almost solely based on deep neural networks with convolutional layers. Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO) are the two most prominent model families. Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case~\cite{ObjectDetectionHistorySurvey}.
 
-An example of a deep learning-based GUI element detection algorithm is OmniParser\footnote{\url{https://microsoft.github.io/OmniParser/}}~--~a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to improve the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}.In~\cite{GUI_YOLO_comparison}, Daneshvar et al. tried training different YOLO architectures for GUI element detection with good results. When AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection~\cite{Horak2020thesis}.
+An example of a deep learning-based GUI element detection algorithm is OmniParser\footnote{\url{https://microsoft.github.io/OmniParser/}}~, a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to improve the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}. In~\cite{GUI_YOLO_comparison}, Daneshvar et al. tried training different YOLO architectures for GUI element detection with good results. When AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection~\cite{Horak2020thesis}.
 
 A key advantage of DL-based solutions is their ability to learn complex patterns from data without explicit programming or manual tuning for a specific domain. However, as stated in the previous section, this reliance on a dataset is also one of the main drawbacks. Both training and inference are also more hardware demanding than most traditional CV algorithms~\cite{DLvsTCV}.
 
@@ -446,8 +446,8 @@ The very simplest problem I could come up with that at least somewhat resembles 
 \end{figure}
 
 \begin{figure}
-    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/cnn_policy.pdf}}
-    \caption{Architecture used by CNN policy. TODO make more readable somehow}
+    \includegraphics[width=1\linewidth]{diagrams/cnn_arch.pdf}
+    \caption{Architecture used by CNN policy. TODO Asi přesunout do appendixu? Zabírá to hodně místa a asi to není až tak důležité tbh}
     \label{fig:cnn_policy}
 \end{figure}
 
@@ -470,7 +470,7 @@ The next step forward was to make the square move. The initial state was created
     \label{fig:env1}
 \end{figure}
 
-The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started catastrophically forgetting. Even though the result was not perfect, it showed that the model can deal with the movement, so I decided to continue.
+The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started catastrophically forgetting. Even though the result was not perfect, it showed that the model could deal with the movement, so I decided to continue.
 
 \section{Moving rectangle}
 \label{subsec:moving_rectangle}
@@ -485,8 +485,8 @@ The next environment was, once again, very similar, the only exception being tha
 This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture shown in figure \ref{fig:mlp_policy}. It is simpler (1.3 million parameters compared to 2.7 million), but for such a simple problem, that could still be more than enough.
 
 \begin{figure}
-    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/mlp_policy.pdf}}
-    \caption{Architecture used by MLP policy.}
+    \includegraphics[width=1\linewidth]{diagrams/mlp_arch.pdf}
+    \caption{Architecture used by MLP policy. TODO: možná přesunout do apendixu}
     \label{fig:mlp_policy}
 \end{figure}
 
@@ -494,7 +494,7 @@ The MLP policy actually outperformed the CNN, and it also seemed a lot more stab
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v2_mpl_cnn.pdf}
-    \caption{Comparison of the mean reward of the MLP policy and CNN policy. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
+    \caption{Comparison of the mean reward of the MLP and CNN policies. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
     \label{fig:v2_mlp_cnn}
 \end{figure}
 
