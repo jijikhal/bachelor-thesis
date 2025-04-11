@@ -25,3 +25,7 @@ This file serves as a place to note down what acronyms were used where so that I
 # RL in practice
 ## SB3
 - SB3 -- Stable-baselines3
+
+# Experiments
+## Static square of uniform size
+- IoU -- Intersection over Union

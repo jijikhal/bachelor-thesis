@@ -407,17 +407,18 @@ Most state-of-the-art RL algorithms are based on deep learning. To train large n
 \chapter{Experiments}
 
 \section{Defining the problem}
+\label{sec:problem_definition}
 
 Before we start training models, it is important to define the problem we are trying to solve first. The goal is to create an algorithm that receives an image as input (be it directly a screenshot of a website or some preprocessed version to simplify the task). It outputs a set of bounding boxes, each of which is a bounding rectangle of an object in the image.
 
 With regular supervised learning solutions, one of the biggest challenges of this sort of object detection is the variability of the output size. Each image can contain a different amount of objects. Thankfully, this is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform actions that somehow represent a bounding box (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions combined create a selection). Since we want to satisfy the Markov property the agent can not remember which objects were already detected. Because of this we have to somehow modify the state to contain this information.
 
-First, we have to decide on the state and action spaces and how we want to represent the state and actions. I decided to start with the simplest mapping I could think of -- the input of the algorithm is an image, so let's make the state an image as well. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values are bounded to 0-255, or 0-1 after normalization. For this, we can use the \texttt{Box} Gymnasium type.
+First, we have to decide on the state and action spaces and the representation of the states and actions. I decided to start with the simplest mapping I could think of; the input of the algorithm is an image that can be used directly as the state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values are bounded to 0-255, or 0-1 after normalization. For this, we can use the \texttt{Box} Gymnasium type. In theory, the \texttt{MultiDiscrete} could be more suitable as the values are discrete, not continuous, but SB3 does not currently support using convolutional layers on discrete spaces.
 
-The representation of actions is a bit more complicated. At first, I again chose the simplest mapping, where each action is one selection; later on, I also tried a different approach. Each action is four floating point numbers from 0-1. The first two represent the X and Y coordinates of the selection center and the other two are the width and height. Again, there are more possible options, such as the coordinates of two corners; again, these are discussed later. Such action space can also be defined using the \texttt{Box} Gymnasium type.
+The representation of actions is a bit more complicated. At first, I again chose the simplest mapping, where each action is one selection; later on, I also tried a different approach. Each action is four floating point numbers from 0-1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center and the other two are the width and height. Again, there are more possible options, such as the coordinates of two corners; again, these are discussed later. Such action space can also be defined using the \texttt{Box} Gymnasium type.
 
 \section{Choosing an algorithm}
-As discussed in Section \ref{sec:algos}, there are many different reinforcement learning algorithms. The Stable-Baselines3 library I am using implements a total of seven: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER}, \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one to start with.
+As discussed in Section \ref{sec:algos}, there are many different reinforcement learning algorithms. The Stable-Baselines3 library implements a total of seven: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER} (in newer versions of SB3 it is no longer a separate algorithm but a type of replay buffer), \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one to start with.
 
 I decided on \texttt{PPO} mainly through a process of elimination. First of all, \texttt{TD3} is an improvement of \texttt{DDPG} and \texttt{PPO} is an improvement of \texttt{A2C}. It is unlikely that the simpler version would perform better, so we can eliminate them. As stated, the action space is continuous, which eliminates \texttt{DQN}. Next up, the state is an image. Even a binary image of $100\times100$ pixels requires over a kilobyte of memory. This makes algorithms that utilize a replay buffer quite impractical, especially if we want to have room to increase the image size later on. This eliminates \texttt{HER}, \texttt{SAC} and \texttt{TD3}, leaving us only with \texttt{PPO}.
 
@@ -426,17 +427,18 @@ I decided on \texttt{PPO} mainly through a process of elimination. First of all,
 \section{Custom environments}
 It might be tempting to start training in an environment that simulates the final problem. When I initially attempted this approach, the results were unsatisfactory, as expected. The complexity of the setup made experimentation difficult: if a change in parameters led to equally poor results, it was unclear whether the adjustment was ineffective, or if the state of the system was so far from ideal that even a beneficial change wouldn't have a noticeable effect. So, instead, I started with a very simplified version of the final problem, and once I reached satisfactory results, I moved on to a more complex task until hopefully eventually returning to the final environment with enough knowledge to complete it.
 
-This also allowed for transfer learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that does not know anything.
+This also allowed for transfer learning and curriculum learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that does not know anything.
 
 The following sections talk about the intermediate environments in greater detail and also provide information on all the steps and experiments I took in order to solve them.
 
 \section{Static square of uniform size}
+% env v0 %
 The very simplest problem I could come up with that at least somewhat resembles the real problem is the following.
 \begin{itemize}
     \item State: consists of a black $100\times100$ pixel image with a white square in the middle. The position of this square is always the same between episodes, and its size does not change. An example can be seen in figure \ref{fig:env0}
-    \item Action: the model returns four numbers representing the bounding box (x and y coordinates of the center and the width and height). The action has no effect on the state. It only gives a reward -- the state does not change. The episode is always one step long.
+    \item Action: the model returns four numbers representing the bounding box ($x$ and $y$ coordinates of the center and the width and height). The action has no effect on the state. It only gives a reward. The state does not change since the episode is always one step long.
     \item Reward: The reward is calculated using the Intersection over Union (IoU) metric (area of the intersection of the correct bounding box compared to the guess divided by the area of their union). When the bounding boxes do not overlap at all, IoU is always zero, no matter how far away they are. In those cases, the reward is the negation of the distance of the centers of the bounding boxes.
-    \item Algorithm: PPO with the default CNN strategy provided by SB-3 as shown in figure \ref{fig:cnn_policy}, default hyperparameters
+    \item Algorithm: \texttt{PPO} with the default \texttt{CnnPolicy} provided by SB3 (the architecture is shown in figure \ref{fig:cnn_policy} in appendix), default hyperparameters.
 \end{itemize}
 
 \begin{figure}
@@ -445,15 +447,9 @@ The very simplest problem I could come up with that at least somewhat resembles 
     \label{fig:env0}
 \end{figure}
 
-\begin{figure}
-    \includegraphics[width=1\linewidth]{diagrams/cnn_arch.pdf}
-    \caption{Architecture used by CNN policy. TODO Asi přesunout do appendixu? Zabírá to hodně místa a asi to není až tak důležité tbh}
-    \label{fig:cnn_policy}
-\end{figure}
-
 I expected the model to overfit very quickly since the state was always identical, and there was a single action that always yielded the best possible reward. The model got to an IoU of 0.94 after around 160,000 time steps, but surprisingly, it started to critically forget quite quickly after that, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior happened less and less for the more complex environments, I assume that the problem was too simple for a complex algorithm such as \texttt{PPO}.
 
-Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of exactly one observation, the biggest possible reward is 1 (since that is the highest score of IoU). The x-axis shows the elapsed time steps.
+Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of exactly one observation, the biggest possible reward is 1 (since that is the highest score of IoU). The $x$-axis shows the elapsed time steps.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v0.pdf}
@@ -462,6 +458,7 @@ Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. S
 \end{figure}
 
 \section{Moving square of uniform size}
+% env v1 %
 The next step forward was to make the square move. The initial state was created by randomly choosing a position within the image and placing the square there. All the other options (reward, action, and algorithm) remain the same. Some examples of this environment can be seen in figure \ref{fig:env1}.
 
 \begin{figure}
@@ -470,11 +467,12 @@ The next step forward was to make the square move. The initial state was created
     \label{fig:env1}
 \end{figure}
 
-The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started catastrophically forgetting. Even though the result was not perfect, it showed that the model could deal with the movement, so I decided to continue.
+The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started to catastrophically forget. Even though the result was not perfect, it showed that the model could deal with the movement, so I decided to continue.
 
 \section{Moving rectangle}
+% env v2 %
 \label{subsec:moving_rectangle}
-The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. \ref{fig:env2}
+The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. Both the placement and size were chosen randomly but with a few constraints. The rectangle could not have a width or height of less than 10 percent of the image, and it could not overflow outside of the image. A few examples can be seen in Figure \ref{fig:env2}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env2.png}
@@ -482,13 +480,7 @@ The next environment was, once again, very similar, the only exception being tha
     \label{fig:env2}
 \end{figure}
 
-This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture shown in figure \ref{fig:mlp_policy}. It is simpler (1.3 million parameters compared to 2.7 million), but for such a simple problem, that could still be more than enough.
-
-\begin{figure}
-    \includegraphics[width=1\linewidth]{diagrams/mlp_arch.pdf}
-    \caption{Architecture used by MLP policy. TODO: možná přesunout do apendixu}
-    \label{fig:mlp_policy}
-\end{figure}
+This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture (shown in detail in Figure \ref{fig:mlp_policy} in the appendix). It is simpler (1.3 million parameters compared to 2.7 million), but for such a simple problem, that could still be more than enough.
 
 The MLP policy actually outperformed the CNN, and it also seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in figure \ref{fig:v2_mlp_cnn}.
 
@@ -498,13 +490,14 @@ The MLP policy actually outperformed the CNN, and it also seemed a lot more stab
     \label{fig:v2_mlp_cnn}
 \end{figure}
 
-\subsection{Multiple rectangles}
+\section{Multiple rectangles}
 \label{subsec:multi-rect}
-Since the performance of detecting a single object seemed pretty good, I decided to move on to more objects.
+% env v3 %
+Since the performance of detecting a single object seemed pretty good, the next logical step was to add more objects. The next environment had the following properties:
 \begin{itemize}
-    \item State: consists of a black $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random place. If it does not overlap with any already placed rectangle, it is added to the image. Because of this randomness, the amount of objects changes between episodes; it can be anywhere between 1 and 5, but on average, it is 3.5 objects. Four examples can be seen in Figure \ref{fig:env3}.
-    \item Action: the model returns 4 numbers representing the bounding box (x and y coordinates of the center and the width and height). If the predicted bounding box overlaps with any of the objects, that object is erased from the state (in its entirety, even if the prediction does not cover all of it).
-    \item Reward: The reward calculation is very similar to the previous environments. If the prediction overlaps any objects, their IoU is the reward (if it overlaps multiple, then the maximum IoU is given). The episode is terminated when all objects are removed or stopped after $n$ guesses, where $n$ is the starting amount of objects. Note that the model is not directly punished for selecting more than one object, but since only one reward is given, it is more beneficial to select them separately since we want to maximize the cumulative reward during an episode.
+    \item State: consists of a black $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random place. If it does not overlap with any already placed rectangle, it is added to the image. Because of this randomness, the amount of objects changes between episodes; it can be anywhere between 1 and 5, but on average, 3.5 objects are placed. Four examples can be seen in Figure \ref{fig:env3}.
+    \item Action: the model returns 4 numbers representing the bounding box ($x$ and $y$ coordinates of the center and the width and height). If the predicted bounding box overlaps with any of the objects, that object is erased from the state (in its entirety, even if the prediction does not cover all of it).
+    \item Reward: The reward calculation is very similar to the previous environments. If the prediction overlaps any objects, their IoU is the reward (if it overlaps multiple, then the maximum IoU is given). The episode is terminated when all objects are removed or stopped after $n$ guesses, where $n$ is the starting amount of objects. Note that the model is not directly punished for selecting more than one object, but since only one reward is given, it is more beneficial to select them separately since, otherwise, the other object is lost without any reward.
 \end{itemize}
 
 \begin{figure}
@@ -513,62 +506,36 @@ Since the performance of detecting a single object seemed pretty good, I decided
     \label{fig:env3}
 \end{figure}
 
-Again, I tried both MLP and CNN strategies. The results can be seen in figure \ref{fig:v3_mlp_cnn}. At first glance, the results might seem just as good as in the previous environment, but remember that since the episodes last multiple timesteps (3.5 on average), the results are pretty poor as the maximum possible reward per episode is now around 3.5, whereas before, it was just 1. When we look at the episode length during training in figure \ref{fig:v3_len}, we can see that the model did use multiple steps for each episode, yet it still did not manage to achieve good results.
+Again, I tried both MLP and CNN strategies. This time, they both performed very similarly, stabilizing at a mean reward per episode of around 0.75 after around 400,000 time steps. At first glance, the results might seem just as good as in the previous environment, but remember that since the episodes last multiple time steps (3.5 on average), the results are pretty poor as the maximum possible reward per episode is now around 3.5, whereas before, it was just 1. This was despite both agents doing an average of 3 actions per episode.
+
+\subsection{Different action definition}
+
+As mentioned in Section \ref{sec:problem_definition}, there are multiple ways to define a bounding box using four numbers. Before, the action was defined as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. My thought process was that since convolutions are translation invariant but not scale invariant, it should be easier to find the corners than the entire object whose size is variable.
+
+This did improve the performance of the CNN-based model slightly (from 0.75 to 1) but surprisingly made the MLP-based model worse (from 0.75 to 0.5).
+
+\subsection{Transfer from previous environment}
+
+Since the previous environment used the same definition of space and actions, it was possible to reuse its weights in this environment with the potential of transferring some of the learned knowledge. While the transferred agent did start off much better, it quickly forgot everything and did not catch up to the agent initialized with random weights.
+
+\subsection{Changing the network architecture}
+\label{subsec:arch_change}
+
+The graphs of all of the previous experiments in this section showed a similar trend. They started off learning relatively quickly, making great progress. After the first 200,000 time steps, the progress slowed down dramatically. This could hint at the agent being too simple for the environment and not being able to learn it.
+
+Since SB3 is based on PyTorch, it is relatively simple to modify the underlying neural networks. In the default \texttt{CnnPolicy}, the actor and the critic share a feature extractor with three convolutional layers and one fully connected layer. Then, each of them has a single fully connected layer (for more detail, see Figure \ref{fig:cnn_policy}).
+
+I modified the architecture by adding an extra fully connected layer to the feature extractor and two extra fully connected layers to both the actor and the critic. This meant that the model had around 6 million parameters. The new architecture can be seen in detail in Figure \ref{fig:bigger_net_policy} in the appendix.
+
+This change helped quite a bit. It outperformed the simple networks, and it continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} shows the comparison between the bigger network and the best CNN policy model. The mean episode lengths did not differ dramatically.
 
 \begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_mlp_cnn.svg}}
-    \caption{Comparison of the mean reward of the MLP policy (blue) and CNN policy (red).}
-    \label{fig:v3_mlp_cnn}
-\end{figure}
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_len.svg}}
-    \caption{Comparison of the mean reward of the MLP policy (blue) and CNN policy (red).}
-    \label{fig:v3_len}
-\end{figure}
-
-The next thing I tried was changing the definition of the action. Before, the four numbers represented the coordinates of the center along with the bounding box width and height. My thought process was that maybe the convolutional layers are not good at quantifying size; instead, they are better at finding a position of some pattern. So instead of center, height and width I changed the action to represent the coordinates of the top-left corner and the coordinates of the bottom-right corner. 
-
-As can be seen in figure \ref{fig:v3_corner}, this change did help the CNN architecture model a bit but not by a lot. Surprisingly it made the MLP-based agent much worse.
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_corner.svg}}
-    \caption{Comparison of the mean reward of the MLP policy (cyan) and CNN policy (pink) when corners are used as the action.}
-    \label{fig:v3_corner}
-\end{figure}
-
-Another idea I had was to utilize transfer learning. I did have a trained agent from the previous environment who was pretty good at finding one rectangle, so maybe if I used it here, it could use its already-learned knowledge and do better than the agents that started from the very beginning. The agent did start off much better than the new ones, but it quickly forgot everything and did not catch up. Below is the comparison of the transfer learning agent (blue) to the CNN-based agent shown before:
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_transfer.svg}}
-    \caption{Comparison of the mean reward of the original agent (pink) and the transferred agent (blue).}
-    \label{fig:v3_transfer}
-\end{figure}
-
-In all of the charts, we can see that all the agents got to some point of knowledge relatively quickly, but after around 200k epochs, the progress slowed down massively or stopped completely. This could be due to the network being too simple to learn the problem, so I tried increasing the network size. Thankfully, this is relatively easy as SB-3 is based on PyTorch, so any kind of network can be passed to the training algorithm. As could be seen in figure \ref{fig:cnn_policy}, which shows the architecture of the CNN policy, both the actor and critic share a feature extractor, and then each of them only has one fully connected layer and nothing else, so it would be no wonder if they could not learn much.
-
-In the new architecture, I added an extra layer to the shared feature extractor (poznámka: tohle byl spíš omyl, protože jsem moc nechápal co dělám xd) as well as adding two extra layers to each the actor and the critic. This meant that the model had around 6 million parameters. The model now had the architecture shown in figure \ref{fig:bigger_net_policy}.
-
-\begin{figure}
-    \makebox[\textwidth][c]{\includegraphics[width=1.5\linewidth]{diagrams/bigger_net_policy.pdf}}
-    \caption{New CNN-based policy with larger networks for actor and critic.}
-    \label{fig:bigger_net_policy}
-\end{figure}
-
-This change helped quite a bit. It performed the same as the simple networks in less than 6 times the number of episodes, and it continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} shows the comparison between the bigger network, the best MLP policy model, and the best CNN policy model. The mean episode lengths did not differ dramatically.
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v3_bigger_net.svg}}
-    \caption{Comparison of the bigger network (orange), best small MLP model (blue), and best small CNN model (pink).}
+    \includegraphics[width=1\linewidth]{graphs/v3_cnn_vs_biggernet.pdf}
+    \caption{Comparison of the mean reward of the default \texttt{CnnPolicy} and a bigger network. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
     \label{fig:v3_bigger_net}
 \end{figure}
 
-The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. While this might still sound pretty bad, note that because of the small size of the image, IoU is pretty strict. For example, if for a rectangle of size 20x20, we guessed a bounding box of the correct size but shifted to the left and down by 2 pixels, the IoU would be only 0.68 even though the guess is only off by 10  \%. Another problem that brings the average down is that sometimes when the image contains two objects far apart, the model gets confused and predicts a bounding box between them repeatedly until the episode is stopped; an example of this behavior can be seen in figure \ref{fig:v3_stuck}.
+The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. While this might still sound pretty bad, note that especially with smaller objects, IoU is pretty strict. For example, if for a rectangle of size $20\times 20$, we guessed a bounding box of the correct size but shifted to the left and down by 2 pixels, the IoU would be only 0.68 even though the guess is only off by 10 percent. Another problem that brings the average down is that sometimes, when the image contained two objects far apart, the model got confused and predicted a bounding box between them repeatedly until the episode was stopped; an example of this behavior can be seen in Figure \ref{fig:v3_stuck}.
 
 \begin{figure}
     \centering
@@ -577,87 +544,54 @@ The resulting model took around 6 hours to train and reached a mean reward of ar
     \label{fig:v3_stuck}
 \end{figure}
 
-\subsection{Different shapes}
-Now that the model was able to predict multiple rectangles in a single image with quite good success, the next step was to introduce other shapes as well. The environment is identical to the previous one, but now, instead of just rectangles, there could also be ellipses and triangles (both of any size and four different possible orientations). Since the rules were still the same, there were an average of 3.5 objects, and they did not collide. Some examples of this environment can be seen in figure \ref{fig:env4}.
+\section{Different shapes}
+%v4 env%
+Now that the model was able to locate multiple rectangles in a single image with quite 
+ a good accuracy, the next step was to introduce other shapes as well. This new environment was identical to the previous one, but instead of just rectangles, there could also be ellipses and triangles. Since the rules were still the same, there were an average of 3.5 objects, and their bounding boxes did not collide. Some examples of this environment can be seen in figure \ref{fig:env4}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env4.png}
-    \caption{Four examples of the environment with a moving square}
+    \caption{Four examples of the environment with multiple different objects}
     \label{fig:env4}
 \end{figure}
  
-The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results as can be seen in figure \ref{fig:v4_bigger_net}.
+The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results, stopping at a reward of around 1.5.
 
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_bigger_net.svg}}
-    \caption{Comparison of the environment with just rectangles (orange) and with other shapes (pink).}
-    \label{fig:v4_bigger_net}
-\end{figure}
+Since the problem is similar to the previous one, I again tried to use transfer learning with the best model from the previous environment for the new one. It actually started with very good results and stayed at a reward of around 2.0 for the rest of the training, only improving a little bit.
 
-Since the problem is similar to the previous one, I again tried to use transfer learning with the best model from the previous environment for the new one. It actually started with very good results and stayed there for the rest of the training, only improving a little bit, see figure \ref{fig:v4_transfer}.
+This showed me that it was definitely possible to get good results. But I wanted to avoid transfer learning, if possible, until the very end because if it were needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further.
 
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_transfer.svg}}
-    \caption{Comparison of the rectangle-only environment (brown), model with other shapes from scratch (pink) and transferred (blue).}
-    \label{fig:v4_transfer}
-\end{figure}
+\subsection{ResNet-18 feature extractor}
+\label{subsec:resnet}
 
-This showed me that it was definitely possible to get good results. But I wanted to avoid transfer learning, if possible, until the very end because if it were needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further. It is a common practice not to create your own feature extractor but instead to use an already existing convolutional network trained by someone else, remove the last layer, and use that as a feature extractor [Source???]. I wanted to try exactly that.
+It is a common practice not to create your own feature extractor but instead to use an already existing convolutional network trained on a similar problem, remove the fully connected layers, and use the rest as a feature extractor \cite[p. 256]{DLforVisualSystems}. I wanted to try this approach.
 
-ResNet18 is a model architecture first proposed in the paper Deep Residual Learning for Image Recognition (\url{https://arxiv.org/abs/1512.03385}). The architecture of ResNet18 is shown in figure \ref{fig:resnet}, source (\url{https://www.researchgate.net/figure/Proposed-Modified-ResNet-18-architecture-for-Bangla-HCR-In-the-diagram-conv-stands-for_fig1_323063171}).
+ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple sizes of the architecture, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor. The architecture of ResNet-18 can be seen in Figure \ref{fig:resnet}.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{diagrams/resnet.png}
-    \caption{Architecture of ResNet18}
+    \caption{Architecture of ResNet18. The illustration was taken from \cite{resnet_illustration}. TODO možná si udělám vlastní obrázek, tenhle je hnusnej}
     \label{fig:resnet}
 \end{figure}
 
-Most notably, it contains 18 convolutional layers (hence the 18 in the name), batch normalization after most of the convolutional layers, and skip connections which allow some of the input to skip the layers, which helps with vanishing gradient. Also, at the end, we can see an adaptive average pooling layer. Unlike regular pooling layers, this one has the output size as a parameter and chooses the stride and kernel size automatically based on the input. This means that we can pass any size of input into it, and the output will be the same size. To use it in our model, we cut off its last fully connected layer.
+It contains 18 convolutional layers (hence the 18 in the name), each followed by a batch normalization layer and some by a dropout layer. An important feature of ResNet are skip connections, which help with vanishing gradients. The PyTorch implementation ends with an adaptive average pooling layer. Unlike regular pooling layers, it has the output size as a parameter and chooses the stride and kernel size automatically based on the input. This makes it so that the output has the same size regardless of the input size
 
-A slight complication is that ResNet18 is meant for colored images (3 channels), but we are currently using binary grayscale images (1 channel), although this might change in the future. There are multiple ways of solving this problem; the simplest is to just duplicate the one channel 3 times. I did something a bit different, adding a convolutional layer at the beginning with a kernel of size 1x1x3, which creates 3 feature maps from our one image. This is very similar to just duplicating the channel 3 times, but the kernel contains learnable parameters, so it is possible for the channels to be different if the network finds that useful. The entire architecture is shown in figure \ref{fig:resnet_policy}.
+A slight complication is that ResNet-18 is meant for colored images (3 channels), but we are currently using binary grayscale images (1 channel), although this might change in the future. There are multiple ways of solving this problem; the simplest is to just duplicate the one channel 3 times. I did something a bit different, adding a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates 3 feature maps from our one image. This is very similar to just duplicating the channel 3 times, but the kernel contains learnable parameters, so it is possible for the channels to be different if the network finds that useful. The entire architecture is shown in figure \ref{fig:resnet_arch} in the appendix.
 
-It is also important to note that the pre-trained ResNet18 (provided by PyTorch) was trained on the COCO dataset, which consists of photographs. This could mean it does not perform as well on binary images (and later on images of websites), but for now, that hopefully should not be a problem.
+It is also important to note that the ResNet-18 provided by PyTorch was pre-trained on the COCO dataset, which consists of photographs. This could mean that the knowledge won't transfer that well for binary images (and later on images of websites).
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{diagrams/resnet_policy.pdf}
-    \caption{The new architecture, using ResNet18 as a feature extractor. TODO make more readable}
-    \label{fig:resnet_policy}
-\end{figure}
-
-A notable effect of this change is that the training is now around 3 times slower (which means 1 million timesteps now take around 2.5 hours on my computer. Hopefully, this could be offset by the improved performance).
-
-I tried again on the same environment, and the results were not great, as visible in figure \ref{fig:v4_resnet_frozen}. I was very surprised by how poor the results were, but I soon found the cause. As the ResNet18 feature extractor was already pre-trained, I thought freezing its weights would make the training faster while not really affecting the results, but I was very wrong. When I tried training again, this time with the weights unfrozen, I got a much better result shown in figure \ref{fig:v4_resnet_finetune}.
+I tried again on the same environment. At first, I used the weights from PyTorch, and I froze them because I thought this would speed up the training. The results were very poor. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. This time, the training went much better, reaching a reward of around 2.8 in less than 2.5 million time steps. Lastly, I also wanted to test whether the pre-trained weights made any difference compared to randomly initialized weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
 
 \begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_frozen.svg}}
-    \caption{Comparison of the old network trained from scratch (pink), transferred model (blue) and new network with ResNet18 feature extractor (cyan).}
-    \label{fig:v4_resnet_frozen}
+    \includegraphics[width=1\linewidth]{graphs/v4_resnet_graph.pdf}
+    \caption{Comparison of the mean reward of the pre-trained frozen, pre-trained fine-tunable, and not pre-trained ResNet-18 based agents with the previous architecture. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
+    \label{fig:v4_resnet_graph}
 \end{figure}
 
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_finetune.svg}}
-    \caption{Comparison of the old network trained from scratch (pink), transferred model (blue) and new network with ResNet18 feature extractor (grey).}
-    \label{fig:v4_resnet_finetune}
-\end{figure}
+While the improvement in performance was great, it also slowed down the training significantly. It took around 2.5 hours for one million time steps, which is around three times slower.
 
-It got the same result as the current best model in just above 500k timesteps, and it even overtook it by a noticeable margin. Sure, the new network was slower to train, but since the previous best model was transferred, it also needed its previous model, so in total, the training was actually faster.
-
-I also wanted to check whether this improvement was caused by the feature extractor being pre-trained or just by the network being significantly bigger. So I repeated the same exact training, but this time with ResNet18 not being pre-trained. In figure \ref{fig:v4_resnet_from_scratch} is the comparison of my old architecture being trained from scratch compared to the new architecture being trained from scratch. We can see that the results are very similar, so I can confidently say that a pre-trained feature extractor does indeed make a difference, although it still has to be fine-tuned.
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v4_resnet_from_scratch.svg}}
-    \caption{Comparison of the old network trained from scratch (pink) and the new network with the ResNet18 feature extractor being trained from scratch (orange).}
-    \label{fig:v4_resnet_from_scratch}
-\end{figure}
-
-\subsection{Hollow shapes}
+\section{Hollow shapes}
 Since it is important for the final model to be able to detect objects located inside one another (to deduce their hierarchy), the next step I wanted to try was to do exactly that -- include shapes inside other shapes. But to do that, I would first need the objects to be hollow. Some examples can be seen in figure \ref{fig:env5}.
 
 \begin{figure}
@@ -676,7 +610,7 @@ I believed that this change would have little to no impact, but I still wanted t
     \label{fig:v5}
 \end{figure}
 
-\subsection{Bigger images}
+\section{Bigger images}
 One thing that is still very different between my prototype and what should be the final product is the size of the input image. AIVA currently mostly uses images in the FullHD format (1920x1080px). Of course, some downscaling is possible if we do not need great details (for example, for reading small text), but downscaling the image all the way to 100x100px would most likely not work very well, and the aspect ratio is also wrong. For these reasons, I wanted to try making the input image larger and see if the current model can work with them just as well as with the smaller ones. Thanks to the aforementioned adaptive pooling layer in ResNet18, I only needed to change the size of the observation space.
 
 At first, I wanted to go all the way to FullHD or at least to HD, but unfortunately, this was not possible due to hardware limitations. The training used all of the GPU's dedicated RAM (10 GB) as well as the shared RAM (16 GB) and then crashed. The largest resolution I managed to get working was 480p (640x480px), and even then, I had to cut the batch size in half (from 64 to 32). Since the image was bigger I also increased the amount of objects on it on average from 3.5 to 15.
@@ -693,7 +627,7 @@ I then let it train using all three of the reward functions for around 2.5m epis
 
 I then benchmarked the three models (this time with the same reward function, otherwise it would not be fair) by running 5000 episodes. The best performing was the method punishing overlap, which scored on average 4.6 per episode (0.59 per object). The other two methods scored similarly -- the one that did not punish scored on average 3.9 per episode (0.5 per object), and the one that punished much harsher scored an average of 4.0 per episode (0.51 per object). There was very little difference in the average episode length.
 
-\subsection{Hierarchical environment}
+\section{Hierarchical environment}
 
 So far all the environments comprised of objects that did not intersect in any way. They were completely independent, and thus, the order in which they were selected did not matter at all. This, of course, differs from how real websites look. They have a hierarchy of objects (one object can contain many others). The next step was to create an environment that would represent this more faithfully.
 
@@ -771,5 +705,29 @@ Compare how hard (and time consuming) it was to make compared to the RL solution
 \appendix %% Start the appendices.
 \chapter{An appendix}
 Here you can insert the appendices of your thesis.
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{diagrams/cnn_arch.pdf}
+    \caption{Architecture used by SB3's \texttt{CnnPolicy}.}
+    \label{fig:cnn_policy}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{diagrams/mlp_arch.pdf}
+    \caption{Architecture used by SB3's \texttt{MlpPolicy}.}
+    \label{fig:mlp_policy}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{diagrams/bigger_net_arch.pdf}
+    \caption{Architecture of the network used in Subsection \ref{subsec:arch_change}.}
+    \label{fig:bigger_net_policy}
+\end{figure}
+
+\begin{figure}
+    \includegraphics[width=1\linewidth]{diagrams/resnet_arch.pdf}
+    \caption{Architecture of the network with a ResNet-18 feature extractor used in Subsection \ref{subsec:resnet}.}
+    \label{fig:resnet_arch}
+\end{figure}
 
 \end{document}
