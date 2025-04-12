@@ -389,6 +389,7 @@ Inference on a model is done through the \texttt{predict} method, which returns 
 I chose to use this library over others mainly because it contains algorithm implementations, simple-to-use API, and good documentation. I chose not to implement the algorithms on my own since they would probably perform worse, and it is unlikely that these implementations would change the outcome of this thesis.
 
 \section{Optuna}
+\label{sec:optuna}
 
 Optuna\footnote{\url{https://optuna.org/}} is an open-source framework used for automated hyperparameter search (or, in general, for optimizing any function with parameters). It uses state-of-the-art algorithms to suggest hyperparameters based on previous experiences, making it much more time-efficient than usual methods such as grid search. Once again, the information in this section is sourced from its official documentation~\cite{optuna-docs}.
 
@@ -469,9 +470,9 @@ The next step forward was to make the square move. The initial state was created
 
 The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started to catastrophically forget. Even though the result was not perfect, it showed that the model could deal with the movement, so I decided to continue.
 
-\section{Moving rectangle}
+\section{Single moving rectangle}
 % env v2 %
-\label{subsec:moving_rectangle}
+\label{sec:moving_rectangle}
 The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. Both the placement and size were chosen randomly but with a few constraints. The rectangle could not have a width or height of less than 10 percent of the image, and it could not overflow outside of the image. A few examples can be seen in Figure \ref{fig:env2}.
 
 \begin{figure}
@@ -491,7 +492,7 @@ The MLP policy actually outperformed the CNN, and it also seemed a lot more stab
 \end{figure}
 
 \section{Multiple rectangles}
-\label{subsec:multi-rect}
+\label{sec:multi-rect}
 % env v3 %
 Since the performance of detecting a single object seemed pretty good, the next logical step was to add more objects. The next environment had the following properties:
 \begin{itemize}
@@ -592,7 +593,8 @@ I tried again on the same environment. At first, I used the weights from PyTorch
 While the improvement in performance was great, it also slowed down the training significantly. It took around 2.5 hours for one million time steps, which is around three times slower.
 
 \section{Hollow shapes}
-Since it is important for the final model to be able to detect objects located inside one another (to deduce their hierarchy), the next step I wanted to try was to do exactly that -- include shapes inside other shapes. But to do that, I would first need the objects to be hollow. Some examples can be seen in figure \ref{fig:env5}.
+%env 5%
+One big simplification we are currently undertaking is, that each position in the image can belong to at most one object, which is not the case in the real problem. To be able to put one object inside others, we need to mark only its edge; otherwise, the inside object will not be visible. In this next environment, the only change is the objects being just their outlines as visible in figure \ref{fig:env5}.
 
 \begin{figure}
     \centering
@@ -601,37 +603,32 @@ Since it is important for the final model to be able to detect objects located i
     \label{fig:env5}
 \end{figure}
  
-I believed that this change would have little to no impact, but I still wanted to try, just in case. However, as expected, this had almost no impact on the training (gray is the old environment, and blue is the new one with hollow shapes), although we can see a couple more dips in figure \ref{fig:v5}.
-
-\begin{figure}
-    \centering
-    \makebox[\textwidth][c]{\includesvg[width=1.25\linewidth]{graphs/v5.svg}}
-    \caption{Comparison of the old environment with filled-in shapes (gray) and the new with hollow shapes (blue)}
-    \label{fig:v5}
-\end{figure}
+This change had little to no effect on the training progression.
 
 \section{Bigger images}
-One thing that is still very different between my prototype and what should be the final product is the size of the input image. AIVA currently mostly uses images in the FullHD format (1920x1080px). Of course, some downscaling is possible if we do not need great details (for example, for reading small text), but downscaling the image all the way to 100x100px would most likely not work very well, and the aspect ratio is also wrong. For these reasons, I wanted to try making the input image larger and see if the current model can work with them just as well as with the smaller ones. Thanks to the aforementioned adaptive pooling layer in ResNet18, I only needed to change the size of the observation space.
+Poznámka: Možná tuto sekci vynechám, jakože jsou tam I zajímavý věci, ale ve výsledku jsem to pak už moc nepoužil.
+%env 6%
+At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since we only need to locate the objects, which should not require pixel-sized details, some downscaling is possible, but squashing the image all the way down to $100\times100$ pixels would likely be too much. Because of this, I wanted to experiment with larger image states.
 
-At first, I wanted to go all the way to FullHD or at least to HD, but unfortunately, this was not possible due to hardware limitations. The training used all of the GPU's dedicated RAM (10 GB) as well as the shared RAM (16 GB) and then crashed. The largest resolution I managed to get working was 480p (640x480px), and even then, I had to cut the batch size in half (from 64 to 32). Since the image was bigger I also increased the amount of objects on it on average from 3.5 to 15.
+Thanks to the aforementioned adaptive average pooling layer used in the ResNet feature extractor, changing the image size would not require any large modifications of the network architecture.
 
-The training started similarly to the previous ones, but it got stuck pretty quickly and did not improve much afterward. I stopped the training after just around 300k episodes. It is possible that the model would catch up eventually, but this setup was not good for experiments since it was over ten times slower than before. For those reasons, I reduced the image size to 200 by 200 pixels, which only slowed down the training by about two times. But even then, the results were not great. From testing the model, it seems that they learned that placing large bounding boxes in places where something is located gives positive rewards, and they did not explore enough to realize that selecting each individually gives a much bigger reward. 
+Due to hardware limitations (GPU memory), the biggest image size that I was able to get running was $640\times480$ pixels, but even then, the training speed slowdown was so significant that I decided not to be so ambitious and I continued with an image size of $200\times200$ pixels (this slowed down the training around two times).
 
-Remember that the current reward function did not punish selecting multiple bounding boxes in any way. So I decided to try and modify it. This would, hopefully, incentivize the model to really avoid selecting multiple objects at once. I came up with the following two possible modifications:
+The size increase itself did not cause any big differences in the training except for the speed. But since the image was bigger it also allowed for more objects to be placed (7 on average). Unfortunately, the reward per object dropped significantly. The model learned to place large bounding box predictions in relevant areas. This did result in a positive reward most of the time but was far from optimal since it usually removed multiple objects at once. The likely cause was that the current reward function did not punish selecting multiple objects at once directly. I came up with two new ways, to calculate the reward in the case where the guess bounding box intersects multiple objects:
+
 \begin{itemize}
-    \item The item with the biggest overlap minus the overlaps of all the other items divided by the union of the main object and the guess
-    \item Calculate IoUs of all intersecting objects. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by some constant.
+    \item Find all objects that intersect with the guess. Find the object with the biggest overlap and calculate its IoU. Calculate the sum of the overlap areas of all the other intersecting objects with the guess, divide this sum by the guess' area, and subtract this from the IoU.
+    \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant.
 \end{itemize}
 
-I then let it train using all three of the reward functions for around 2.5m episodes. Of course, RL training can be somewhat unstable, so it would be better to run this experiment multiple times, but it should show us if there are any major differences between the reward functions.
-
-I then benchmarked the three models (this time with the same reward function, otherwise it would not be fair) by running 5000 episodes. The best performing was the method punishing overlap, which scored on average 4.6 per episode (0.59 per object). The other two methods scored similarly -- the one that did not punish scored on average 3.9 per episode (0.5 per object), and the one that punished much harsher scored an average of 4.0 per episode (0.51 per object). There was very little difference in the average episode length.
+The first option did help, bringing the per-object IoU from 0.5 to around 0.6. The second one had a very minimal impact. While IoU of 0.6 is usually considered acceptable \cite[p. 291]{DLforVisualSystems}, this experiment showed me that my current solution had problems even with an object count of less than 10, which is not acceptable since an average website probably contains closer to 100 objects.
 
 \section{Hierarchical environment}
+\label{sec:hierarchical-env}
 
 So far all the environments comprised of objects that did not intersect in any way. They were completely independent, and thus, the order in which they were selected did not matter at all. This, of course, differs from how real websites look. They have a hierarchy of objects (one object can contain many others). The next step was to create an environment that would represent this more faithfully.
 
-At first, I tried to use the same technique as before -- randomly attempting to place objects that do not overlap, but this time, I allowed such overlaps where one object was fully inside another. This did not work very well; the number of objects differed greatly between attempts, they were often placed very close to one another, and the depth of the hierarchy was very shallow. So instead, I created a generator that directly created a tree-like structure. It starts with a root object that encloses the whole image, then it selects an area inside with a random offset to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. It is also possible to customize the maximum depth, the minimum size of an object, minimum spacing, and so on. Some examples of this new generation can be seen in figure \ref{fig:env7}
+At first, I tried to use the same technique as before -- randomly attempting to place objects that do not overlap, but this time, I allowed such overlaps where one object was fully inside another. This did not work very well; the number of objects differed greatly between attempts, they were often placed very close to one another, and the depth of the hierarchy was very shallow. So, instead, I created a generator that directly created a tree-like structure. It starts with a root object that encloses the whole image, then it selects an area inside with a random offset to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. It is also possible to customize the maximum depth, the minimum size of an object, minimum spacing, and so on. Some examples of this new generation can be seen in figure \ref{fig:env7}
 
 \begin{figure}
     \centering
@@ -640,37 +637,33 @@ At first, I tried to use the same technique as before -- randomly attempting to 
     \label{fig:env7}
 \end{figure}
 
-A new reward function was needed as well. I came up with the following method. First, find all objects that the guess intersects with or fully encloses; if there are none, also include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of the guess, and this object minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If there are multiple intersecting objects, then the one that is deepest in the hierarchy is chosen, and the same calculations are done. The episode ends when the root object is removed.
+A new reward function was needed as well. I came up with the following method. First, find all objects that the guess intersects with or fully encloses; if there are none, also include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of this object with the guess minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If there are multiple intersecting objects, then the one that is deepest in the hierarchy is chosen, and the same calculations are done. The episode ends when the root object is removed.
 
-I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about two. The transferred model did do better by around 25 percent but both did pretty bad. From the testing, it was clear that the model learned that placing long bounding boxes of width zero would almost always result in a nonnegative reward because the IoU of such bounding box is always zero, and the model did not explore enough to realize that it could do much better.
+I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about 2. The transferred model did perform slightly better but not by much. From the testing, it was clear that the model learned that placing long bounding boxes of width zero would almost always result in a nonnegative reward because the IoU of such bounding box is always zero, and the model did not explore enough to realize that it could do much better.
 
-To combat this, I tried modifying some hyperparameters that should encourage exploration, namely:
+\subsection{Manual hyperparameter tuning}
+
+One thing I have not yet experimented with was hyperparameter tuning. Since I needed to encourage the model to explore more, this was a perfect opportunity. I manually tried changing each of the following parameters:
+
 \begin{itemize}
-    \item The discount factor $\gamma$ (described in section \ref{sec:goal}) -- by default, this parameter is set to 0.99, but in our case, discounting does not really make sense. Because of how the environment is set up, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is not needed, and $\gamma$ should be set to 1.
-    \item Entropy loss coefficient $c_2$ -- in the PPO loss function contains an entropy bonus which rewards less deterministic policies. Increasing it should thus lead to more exploration~\cite{PPO_paper}
-    \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents big updates to a policy, which should prevent it from \enquote{jumping off a cliff}~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
+    \item The discount factor $\gamma$ (described in Section \ref{sec:goal}) -- By default, this parameter is set to 0.99, but in our case, discounting does not really make sense. Because of how the environment is set up, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is not needed, and $\gamma$ should be set to 1.
+    \item Entropy loss coefficient $c_2$ -- The PPO loss function contains an entropy bonus that rewards less deterministic policies. Increasing it should thus lead to a more stochastic model and more exploration~\cite{PPO_paper}. By default, this hyperparameter is set to 0.
+    \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents big updates to the policy and value function, which should prevent it from \enquote{jumping off a cliff}~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
     \item Learning rate $\varepsilon$ -- When making an update to the policy network, the gradient is multiplied by this constant. Higher learning should make the training faster, but at the same time, the jumps are bigger, which can lead to unstable learning.
 \end{itemize}
 
-I tried both lowering and increasing each of these parameters but unfortunately, none of the changes had a bigger positive impact. Lowering $\gamma$ and increasing the clip range did lead to slightly better results but only by a little. This showed me that it might be better to try a completely different approach rather than trying to improve this one over and over with little to no success.
+I tried both lowering and increasing each of these parameters, but unfortunately, none of the changes had a bigger positive impact. Lowering $\gamma$ and increasing the clip range did lead to slightly better results, but only by a little.
 
-I ran a study of around 100 trails each consisting of at most 200,000 episodes reporting intermediate values every 20,000 episodes. On two computers this took around 6 hours. The progress can be seen in figure \ref{fig:optuna-progress}. Optuna was allowed to tune almost every possible hyperparameter of the PPO algorithm including things like size of the actor and critic networks. From the results it was clear that learning rate made the biggest difference. Up until this point I only used fixed learning rate but Optuna found much better results using linear decaying learning rate.
+Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that did not lead to much progress. Since I did not have many ideas left on how to improve the training further, I decided to try a completely different approach.
 
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{diagrams/optuna_progress.png}
-    \caption{Progress of hyperparameter tunning with Optuna}
-    \label{fig:optuna-progress}
-\end{figure}
+\section{Switching to discrete actions}
+\label{sec:iterative}
 
-\chapter{Training a model that predicts iteratively}
-\label{ch:iterative}
+Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. \cite{rl_object_detection}~describes and compares two approaches for object detection using reinforcement learning, both using discrete action space. Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this selection repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward.
 
-Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach.~\cite{rl_object_detection} describes and compares two approaches for object detection using reinforcement learning, both using discrete action space (which should be a bit simpler for the model to learn). Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this box repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward.
+The first method, originally described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with the same aspect ratio as the image.
 
-The first method, originally described in~\cite{hierarchical_od_with_drl}, has five movement actions (each results in zooming into a different 'quarter' of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with one fixed aspect ratio.
-
-The second method, originally described in~\cite{iterative_od_with_rl}, uses a similar approach but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, we should be fine as we probably do not need pixel-perfect predictions. An example of one episode can be seen in figure \ref{fig:exmaple_from_paper}.
+The second method, originally described in~\cite{iterative_od_with_rl}, uses a similar approach, but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, it should be fine as we do not need pixel-perfect predictions. An example of one episode can be seen in figure \ref{fig:exmaple_from_paper}.
 
 \begin{figure}
     \centering
@@ -679,19 +672,51 @@ The second method, originally described in~\cite{iterative_od_with_rl}, uses a s
     \label{fig:exmaple_from_paper}
 \end{figure}
 
-As for the observation space, it is once again an image, but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions but~\cite{rl_object_detection} found that including them did not help.
+As for the observation space, it is once again an image, but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions, but~\cite{rl_object_detection} found that including them did not help.
 
-I implemented this approach in a simplified form as a proof of concept with only four actions, each of them shrinking the bounding box by some fixed percentage from one of the four sides and the trigger action. This simplifies the problem while keeping the ability to create predictions of any size.
+I implemented a simpler version of this approach with only four actions, each of them shrinking the bounding box by some fixed percentage from one of the four sides. This simplifies the problem while keeping the ability to create predictions of any size.
 
-The suggested reward function compares the IoU of the state before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if it got worse. When the trigger action is taken, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$.~\cite{rl_object_detection} further tried changing them but did not find any improvements when they were increased.
+The suggested reward function compares the IoU of the state before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if it got worse. When the trigger action is taken, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$. \cite{rl_object_detection}~further tried changing them but did not find any improvements when they were increased.
 
-This reward function is good for single object detection because the correct action will always improve the IoU, but when multiple objects are present, and the calculation is more complicated than IoU, this does not have to be the case. For this reason, I started my PoC with a much simpler sparse reward function, which only gives a reward for the trigger action using the same calculation as in my previous environments.
+This reward function is good for single object detection because the correct action will always improve the IoU, but when multiple objects are present, and the calculation is more complicated, this does not have to be the case. For this reason, I started my experiment with a much simpler sparse reward function, which only gives a reward for the trigger action. The reward is computed using the same calculation as in my previous environments.
 
-The first experiment I did was on one of the simplest environments I made, containing just one filled-in rectangle of variable size at variable position (described in \ref{subsec:moving_rectangle}). The model learned to find the rectangle pretty quickly, but the accuracy was not great, mainly because the bounding box modification step was too large (one step shrunk the bounding box by 15 \%). When I lowered it to just 5 \%, the accuracy improved, but it took way too many steps (around 60), which would later slow down the inference by a lot. For this reason, in the following environments, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a low amount of steps.
+\section{Single moving rectangle with discrete actions}
 
-I then moved on to the next environment described in \ref{subsec:multi-rect}, which contains multiple rectangles. With the default hyperparameters, it struggled, but when I tried running it with a higher clip range and lower gamma (as discovered in the previous chapter), all of a sudden, the results were much better. There was no big change when I changed the rectangles to be just outlines.
+To test this new approach, I modified the environment described in Section \ref{sec:moving_rectangle}, which contains just a single rectangle. The model learned to find the rectangle pretty quickly, but the accuracy was not great, mainly because the selection shrinking was too large (one step shrunk the bounding box by 15 \%). When I lowered it to just 5 \%, the accuracy improved, but it took way too many steps (around 60), which would later slow down the inference by a lot.
 
-With the hierarchical environment, it once again struggled, so since I saw how big of an impact hyperparameters can have, I decided to once again try to tune them. But this time not using just manual guessing but instead an automated process. The SB-3 documentation recommended to use the rl-zoo library, which contains pre-trained models, environments, and scripts for training and hyperparameter optimization. I tried using it but failed to use it for my more complicated network architecture. So instead I wrote my own script.
+Compared to the previous approach on the same environment, the training did take around ten times as many time steps to get to the same reward, but this was expected since suddenly a single guess required 30 to 50 time steps instead of just one.
+
+\section{Multiple rectangles with discrete actions}
+
+Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to also use discrete actions. To account for the problematic accuracy caused by too large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a low amount of steps.
+
+This is the environment where, with the previous approach, I had to switch to the bigger network. This time, I went directly with the ResNet-18-based network. This combination worked really well, reaching the same reward of 2.1 in only around 700,000 time steps compared to the 10,000,000 with the previous approach, even though one episode took around 80 time steps compared to 3.5.
+
+\section{Hierarchical environment with discrete actions}
+
+Seeing the great success of the new approach, I decided to skip all the way to the hierarchical environment described in Section \ref{sec:hierarchical-env}, which I was not able to solve using continuous actions.
+
+\subsection{Changing to dense reward function}
+
+Unfortunately, even this time, the results were terrible. The agent struggled to even reach the positive reward. Since the actions described in \cite{iterative_od_with_rl} were helpful so far, I also wanted to get closer to their reward function. The main change was going from a semi-sparse function (only giving rewards for trigger actions) to a dense function (rewarding every action). This should give the agent a lot more information to learn from.
+
+I came up with the following. After each interaction find all leaf elements (with no children) that have an overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference.
+
+After some experimenting, changed the reward function for the trigger action not to give a fixed constant value but instead award 3 times the selection IoU since otherwise there would be little incentive to go past the threshold IoU of 0.5.
+
+\subsection{Automated hyperparameter tuning}
+
+Since I was not seeing much progress, I decided to revisit hyperparameter tuning once more, but this time not trying to find them manually but instead using Optuna (see Section \ref{sec:optuna}).
+
+I ran a study of 200 trials, each running 200,000 time steps (if not pruned earlier). This took around 24 hours, although it is good to say that the final best hyperparameters were found in trial 23 after only 3 hours. The most important hyperparameter, according to this study, was the learning rate. Optuna found, that using about a tenth of the default learning rate and decaying it linearly made quite a large difference.
+
+The new reward function and hyperparameters brought the average episode reward from barely over zero to over twelve in less than one million time steps. Since the current environment generated, on average, 3.9 objects, and the maximum reward per object was 4 (1 for shrinking actions, 3 for the trigger actions), this meant an average IoU of over 0.75.
+
+After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20 or an IoU of almost 0.8 per object. This showed me, that the approach with discrete actions scaled well even with more objects.
+
+Interestingly, one of the tunable parameters were the sizes of the actor and critic networks. In both of the tunings, this parameter was deemed as very unimportant. In that later one, the best result was achieved using the smallest architecture of only one layer of 64 neurons. Because of this result, I reverted to the simple \texttt{CnnPolicy} provided by SB3.
+
+\section{Rectangles based on a website screenshot}
 
 \chapter{Comparison with other methods}
 TODO: Implement two solutions: one based on CNNs (probably YOLOv8 with some free dataset), one based on classical CV (finding contours).
