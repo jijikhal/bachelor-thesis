@@ -145,7 +145,7 @@ A key advantage of DL-based solutions is their ability to learn complex patterns
 
 \section{Object detection with reinforcement learning}
 
-The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and DL requires a large, high-quality dataset. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. It should be possible to create a function that evaluates the quality of a bounding box prediction based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, removing the need for a dataset with manually labeled ground truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
+The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and DL requires a large, high-quality dataset. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. It could be possible to create a function that evaluates the quality of a bounding box prediction based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, removing the need for a dataset with manually labeled ground truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
 
 Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in Chapter~\ref{ch:dlr}).
 
@@ -228,6 +228,7 @@ Simple MDPs can be visualized as diagrams, as can be seen in Figure \ref{fig:mdp
 \end{figure}
 
 \subsection{Markov property}
+\label{subsec:markov_property}
 Notice that the probabilistic transition function $p$ only takes the current state and action as inputs. Importantly, it does not take history into consideration. The probability of transitioning from state $s$ to state $s'$ using action $a$ is always the same no matter how the MDP got into the state $s$. This memorylessness of MDPs is known as the Markov property, and it is important to remember when implementing an environment since many RL algorithms rely on the environment to fulfill the Markov property. It can be formally defined as
 \begin{equation}
 P(S_{t+1}\mid S_t,A_t)=P(S_{t+1}\mid S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
@@ -329,7 +330,7 @@ The simplest approach to reinforcement learning is learning to approximate the a
 
 For simple environments with small discrete state and action spaces, it is possible to simply have a table of every state-action combination (tabular algorithms). There are many different algorithms utilizing this principle. They differ in the way they calculate the approximations (Temporal difference (TD), Monte-Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. There are also some more advanced algorithms that approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
 
-While tabular algorithms can work very well for simple environments, they are unusable for any more complex environments. Even for just a $100 \times 100$-pixel binary image, this would require a table of over $10^{72247}$ numbers.
+While tabular algorithms can work very well for simple environments, they are unusable for any more complex environments. Even for just a $100 \times 100$ pixel binary image, this would require a table of over $10^{72247}$ numbers.
 
 For these more complex environments, deep-learning is utilized; the approximator is a neural network whose loss function is calculated as the difference between the approximations and real values gathered during exploration. These methods often use a replay buffer -- a data structure that collects experience tuples from previous runs. When learning, examples are picked at random from this buffer, which somewhat minimizes the bias in data caused by the experiences from one episode not being independent. These methods include algorithms such as Neural Fitted Q-iteration (NFQ), Deep Q-Learning (DQN), and Double DQN (DDQN).
 
@@ -410,36 +411,36 @@ Most state-of-the-art RL algorithms are based on deep learning. To train large n
 \section{Defining the problem}
 \label{sec:problem_definition}
 
-Before we start training models, it is important to define the problem we are trying to solve first. The goal is to create an algorithm that receives an image as input (be it directly a screenshot of a website or some preprocessed version to simplify the task). It outputs a set of bounding boxes, each of which is a bounding rectangle of an object in the image.
+Before we start training models, we must define the problem we are trying to solve. The goal is to create an algorithm that receives an image as input (be it directly a screenshot of a website or some preprocessed version to simplify the task). It outputs a set of bounding boxes, each of which is the bounding rectangle of an object in the image. The algorithm should find all objects in the image.
 
-With regular supervised learning solutions, one of the biggest challenges of this sort of object detection is the variability of the output size. Each image can contain a different amount of objects. Thankfully, this is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform actions that somehow represent a bounding box (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions combined create a selection). Since we want to satisfy the Markov property the agent can not remember which objects were already detected. Because of this we have to somehow modify the state to contain this information.
+With regular supervised learning, the variable length of the output could be a challenge. Each image can contain a different amount of objects. Thankfully, this is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform such actions that are convertible into bounding boxes (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions combined create a selection). Already found objects have to be marked somehow since the agent has no memory (see Subsection \ref{subsec:markov_property}).
 
-First, we have to decide on the state and action spaces and the representation of the states and actions. I decided to start with the simplest mapping I could think of; the input of the algorithm is an image that can be used directly as the state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values are bounded to 0-255, or 0-1 after normalization. For this, we can use the \texttt{Box} Gymnasium type. In theory, the \texttt{MultiDiscrete} could be more suitable as the values are discrete, not continuous, but SB3 does not currently support using convolutional layers on discrete spaces.
+First, we have to decide on the state and action spaces and the representation of the states and actions. The input image can be used directly as the state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values of this tensor are integers in the range 0-255 or real numbers in the range 0-1 after normalization. The \texttt{Box} Gymnasium type is ideal for this representation. In theory, the \texttt{MultiDiscrete} could be more suitable as the values are discrete, not continuous, but SB3 does not currently support using convolutional layers on discrete spaces.
 
-The representation of actions is a bit more complicated. At first, I again chose the simplest mapping, where each action is one selection; later on, I also tried a different approach. Each action is four floating point numbers from 0-1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center and the other two are the width and height. Again, there are more possible options, such as the coordinates of two corners; again, these are discussed later. Such action space can also be defined using the \texttt{Box} Gymnasium type.
+The representation of actions is more complicated than that of the state. At first, I again chose the most straightforward mapping, where each action is one selection; starting from Section \ref{sec:iterative}, I switched to a different approach. Each action is a tuple of four real numbers from 0-1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center, and the other two represent the width and height. Other representations of a bounding box using four real numbers are possible, one of which is explored in Subsection \ref{subsec:different_rect_repr}. Such action space can also be defined using the \texttt{Box} Gymnasium type.
 
 \section{Choosing an algorithm}
-As discussed in Section \ref{sec:algos}, there are many different reinforcement learning algorithms. The Stable-Baselines3 library implements a total of seven: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER} (in newer versions of SB3 it is no longer a separate algorithm but a type of replay buffer), \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one to start with.
+As discussed in Section \ref{sec:algos}, many different reinforcement learning algorithms exist. The Stable-Baselines3 library implements a total of seven\footnote{Seven more experimental algorithms are available in the contribution version of the library.}: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER}\footnote{In newer versions of SB3 \texttt{HER} is no longer a separate algorithm but just a type of a replay buffer.}, \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one as a starting point.
 
-I decided on \texttt{PPO} mainly through a process of elimination. First of all, \texttt{TD3} is an improvement of \texttt{DDPG} and \texttt{PPO} is an improvement of \texttt{A2C}. It is unlikely that the simpler version would perform better, so we can eliminate them. As stated, the action space is continuous, which eliminates \texttt{DQN}. Next up, the state is an image. Even a binary image of $100\times100$ pixels requires over a kilobyte of memory. This makes algorithms that utilize a replay buffer quite impractical, especially if we want to have room to increase the image size later on. This eliminates \texttt{HER}, \texttt{SAC} and \texttt{TD3}, leaving us only with \texttt{PPO}.
+I decided on \texttt{PPO} mainly through a process of elimination. First of all, \texttt{TD3} is an improvement of \texttt{DDPG} and \texttt{PPO} is an improvement of \texttt{A2C}. It is unlikely that the simpler versions would perform better, so we can eliminate them. As stated, the action space is continuous, eliminating \texttt{DQN} (later in the thesis, where I switch to discrete actions, \texttt{SAC}, \texttt{DDPG} and \texttt{TD3} are unusable since they only support continuous actions). Since the state is an image, we want to avoid algorithms that utilize a replay buffer because even a binary image of $100\times100$ pixels requires over a kilobyte of memory. The size might increase even further, which could lead to hardware bottlenecks. This eliminates \texttt{HER}, \texttt{SAC} and \texttt{TD3}, leaving us only with \texttt{PPO}.
 
-\texttt{PPO} is also the recommended algorithm for continuous actions when multiprocessing is available according to the SB3 documentation \cite{SB3-docs}.
+\texttt{PPO} is also the recommended algorithm for both continuous and discrete actions when multiprocessing is available according to the SB3 documentation \cite{SB3-docs}.
 
 \section{Custom environments}
-It might be tempting to start training in an environment that simulates the final problem. When I initially attempted this approach, the results were unsatisfactory, as expected. The complexity of the setup made experimentation difficult: if a change in parameters led to equally poor results, it was unclear whether the adjustment was ineffective, or if the state of the system was so far from ideal that even a beneficial change wouldn't have a noticeable effect. So, instead, I started with a very simplified version of the final problem, and once I reached satisfactory results, I moved on to a more complex task until hopefully eventually returning to the final environment with enough knowledge to complete it.
+It might be tempting to start training in an environment that simulates the final problem. When I initially attempted this approach, the results were unsatisfactory, as expected. The complexity of the setup made experimentation difficult: if a change in parameters led to equally poor results, it was unclear whether the adjustment was ineffective or if the current implementation was so far from ideal that even a beneficial change would not have a noticeable effect. So, instead, I started with a very simplified version of the final problem. Once I reached satisfactory results, I could move on to a more complex task and repeat this process until returning to the final environment with enough knowledge to complete it.
 
-This also allowed for transfer learning and curriculum learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that does not know anything.
+This gradual increase in difficulty also allows for transfer learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that does not know anything.
 
-The following sections talk about the intermediate environments in greater detail and also provide information on all the steps and experiments I took in order to solve them.
+The following sections discuss the intermediate environments in greater detail and provide information on all the steps and experiments I took to solve them.
 
 \section{Static square of uniform size}
 % env v0 %
-The very simplest problem I could come up with that at least somewhat resembles the real problem is the following.
+The simplest problem I could think of that still resembles the real problem was the following:
 \begin{itemize}
-    \item State: consists of a black $100\times100$ pixel image with a white square in the middle. The position of this square is always the same between episodes, and its size does not change. An example can be seen in figure \ref{fig:env0}
-    \item Action: the model returns four numbers representing the bounding box ($x$ and $y$ coordinates of the center and the width and height). The action has no effect on the state. It only gives a reward. The state does not change since the episode is always one step long.
-    \item Reward: The reward is calculated using the Intersection over Union (IoU) metric (area of the intersection of the correct bounding box compared to the guess divided by the area of their union). When the bounding boxes do not overlap at all, IoU is always zero, no matter how far away they are. In those cases, the reward is the negation of the distance of the centers of the bounding boxes.
-    \item Algorithm: \texttt{PPO} with the default \texttt{CnnPolicy} provided by SB3 (the architecture is shown in figure \ref{fig:cnn_policy} in appendix), default hyperparameters.
+    \item State: a $100\times100$ pixel binary image with a square of non-zero values in the middle. The position of this square is always the same between episodes, and its size does not change. An example is shown in Figure \ref{fig:env0}
+    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. The action does not affect the state since the episode is always just one step long.
+    \item Reward: The reward is determined using the Intersection over Union (IoU) metric (area of the intersection of the ground truth bounding box and the guess divided by the area of their union). Non-overlapping bounding boxes always have an IoU of zero, no matter how far away they are. In those cases, the reward is equal to minus the distance of the centers of the bounding boxes to encourage moving the boxes closer together.
+    \item Algorithm: \texttt{PPO} with the default \texttt{CnnPolicy} provided by SB3 (the network architecture is shown in Figure \ref{fig:cnn_policy} in the Appendix), default hyperparameters.
 \end{itemize}
 
 \begin{figure}
@@ -448,9 +449,9 @@ The very simplest problem I could come up with that at least somewhat resembles 
     \label{fig:env0}
 \end{figure}
 
-I expected the model to overfit very quickly since the state was always identical, and there was a single action that always yielded the best possible reward. The model got to an IoU of 0.94 after around 160,000 time steps, but surprisingly, it started to critically forget quite quickly after that, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior happened less and less for the more complex environments, I assume that the problem was too simple for a complex algorithm such as \texttt{PPO}.
+I expected the model to overfit very quickly since the state was always identical, and there was a single action that always yielded the best possible reward. The model got to an IoU of 0.94 after around 160,000 time steps, but surprisingly, it started to critically forget shortly after, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior happened less and less for the more complex environments, I assume the problem was too simple for a complex algorithm such as \texttt{PPO}.
 
-Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of exactly one observation, the biggest possible reward is 1 (since that is the highest score of IoU). The $x$-axis shows the elapsed time steps.
+Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of precisely one observation, the highest possible reward is 1 (since that is the highest achievable IoU). The $x$-axis shows the elapsed time steps.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v0.pdf}
@@ -460,7 +461,7 @@ Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. S
 
 \section{Moving square of uniform size}
 % env v1 %
-The next step forward was to make the square move. The initial state was created by randomly choosing a position within the image and placing the square there. All the other options (reward, action, and algorithm) remain the same. Some examples of this environment can be seen in figure \ref{fig:env1}.
+The next step forward was to make the square move. The initial state was created by placing the square in a randomly chosen position within the image. All the other parameters (reward, action, and algorithm) remain the same. Figure \ref{fig:env1} shows some examples of this environment.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env1.png}
@@ -468,12 +469,12 @@ The next step forward was to make the square move. The initial state was created
     \label{fig:env1}
 \end{figure}
 
-The best model was able to guess the position of the bounding box pretty well, usually within the actual square, but it struggled with the size even though, again, I expected it to overfit since there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started to catastrophically forget. Even though the result was not perfect, it showed that the model could deal with the movement, so I decided to continue.
+The best model could guess the bounding box's position pretty well, usually within the actual square. However, it struggled with the size even though, again, there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started to catastrophically forget. Even though the result was not optimal, it showed that the model could handle the movement, so I decided to continue.
 
 \section{Single moving rectangle}
-% env v2 %
 \label{sec:moving_rectangle}
-The next environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. Both the placement and size were chosen randomly but with a few constraints. The rectangle could not have a width or height of less than 10 percent of the image, and it could not overflow outside of the image. A few examples can be seen in Figure \ref{fig:env2}.
+% env v2 %
+The following environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. Both the placement and size were chosen randomly but with a few constraints. The rectangle could not have a width or height of less than 10 percent of the image, and it could not overflow outside of the image. A few examples are shown in Figure \ref{fig:env2}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env2.png}
@@ -481,13 +482,13 @@ The next environment was, once again, very similar, the only exception being tha
     \label{fig:env2}
 \end{figure}
 
-This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture (shown in detail in Figure \ref{fig:mlp_policy} in the appendix). It is simpler (1.3 million parameters compared to 2.7 million), but for such a simple problem, that could still be more than enough.
+This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture (shown in detail in Figure \ref{fig:mlp_policy} in the Appendix). The network has fewer parameters (1.3 million compared to 2.7 million), but for such a simple problem, that could still be more than enough.
 
-The MLP policy actually outperformed the CNN, and it also seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in figure \ref{fig:v2_mlp_cnn}.
+The MLP-based policy outperformed the CNN-based one and seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in figure \ref{fig:v2_mlp_cnn}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v2_mpl_cnn.pdf}
-    \caption{Comparison of the mean reward of the MLP and CNN policies. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
+    \caption{Comparison of the mean reward of the MLP and CNN policies. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. For better clarity, the graph contains both raw values and exponential moving averages.}
     \label{fig:v2_mlp_cnn}
 \end{figure}
 
@@ -496,9 +497,9 @@ The MLP policy actually outperformed the CNN, and it also seemed a lot more stab
 % env v3 %
 Since the performance of detecting a single object seemed pretty good, the next logical step was to add more objects. The next environment had the following properties:
 \begin{itemize}
-    \item State: consists of a black $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random place. If it does not overlap with any already placed rectangle, it is added to the image. Because of this randomness, the amount of objects changes between episodes; it can be anywhere between 1 and 5, but on average, 3.5 objects are placed. Four examples can be seen in Figure \ref{fig:env3}.
-    \item Action: the model returns 4 numbers representing the bounding box ($x$ and $y$ coordinates of the center and the width and height). If the predicted bounding box overlaps with any of the objects, that object is erased from the state (in its entirety, even if the prediction does not cover all of it).
-    \item Reward: The reward calculation is very similar to the previous environments. If the prediction overlaps any objects, their IoU is the reward (if it overlaps multiple, then the maximum IoU is given). The episode is terminated when all objects are removed or stopped after $n$ guesses, where $n$ is the starting amount of objects. Note that the model is not directly punished for selecting more than one object, but since only one reward is given, it is more beneficial to select them separately since, otherwise, the other object is lost without any reward.
+    \item State: consists of a binary $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random place. It is added to the image if it does not overlap with any already placed rectangle. Because of this randomness, the amount of objects changes between episodes; it can be between 1 and 5, but on average, 3.5 objects are present. Four examples can be seen in Figure \ref{fig:env3}.
+    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. If the predicted bounding box overlaps with any objects, those objects are erased from the state (in its entirety, even if the prediction does not cover their whole area).
+    \item Reward: The reward calculation is similar to the previous environments. If the prediction overlaps an object, its IoU with the guess is the reward (if it overlaps multiple, then the maximum IoU is given). The episode terminates when all objects are removed. The episode is truncated if the number of guesses matches the number of initially placed objects. Note that the model is not directly punished for selecting more than one object. However, since only one reward is given, it is more beneficial to select them separately.
 \end{itemize}
 
 \begin{figure}
@@ -507,36 +508,37 @@ Since the performance of detecting a single object seemed pretty good, the next 
     \label{fig:env3}
 \end{figure}
 
-Again, I tried both MLP and CNN strategies. This time, they both performed very similarly, stabilizing at a mean reward per episode of around 0.75 after around 400,000 time steps. At first glance, the results might seem just as good as in the previous environment, but remember that since the episodes last multiple time steps (3.5 on average), the results are pretty poor as the maximum possible reward per episode is now around 3.5, whereas before, it was just 1. This was despite both agents doing an average of 3 actions per episode.
+Again, I tried both MLP and CNN policies. This time, they both performed similarly, stabilizing at a mean reward per episode of around 0.75 after around 400,000 time steps. At first glance, the results might seem just as good as in the previous environment. However, since the episodes lasted multiple time steps (3.5 on average), the maximum possible reward per episode was now around 3.5, whereas before, it was just 1. This poor result was despite both agents doing an average of 3 actions per episode.
 
 \subsection{Different action definition}
+\label{subsec:different_rect_repr}
 
-As mentioned in Section \ref{sec:problem_definition}, there are multiple ways to define a bounding box using four numbers. Before, the action was defined as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. My thought process was that since convolutions are translation invariant but not scale invariant, it should be easier to find the corners than the entire object whose size is variable.
+As mentioned in Section \ref{sec:problem_definition}, using four real numbers, there are multiple ways to define a bounding box. Before, I interpreted the action as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. My thought process was that since convolutions are translation invariant but not scale invariant, it should be easier to find the corners than the entire object whose size is variable.
 
-This did improve the performance of the CNN-based model slightly (from 0.75 to 1) but surprisingly made the MLP-based model worse (from 0.75 to 0.5).
+This change slightly improved the performance of the CNN-based model (from 0.75 to 1) but surprisingly made the MLP-based model worse by around 33 percent.
 
 \subsection{Transfer from previous environment}
 
-Since the previous environment used the same definition of space and actions, it was possible to reuse its weights in this environment with the potential of transferring some of the learned knowledge. While the transferred agent did start off much better, it quickly forgot everything and did not catch up to the agent initialized with random weights.
+Since the previous environment used identical definitions of space and actions, it was possible to reuse its weights in this environment with the potential of transferring some of the learned knowledge. While the transferred agent did start much better, it quickly forgot everything and did not catch up to the agent initialized with random weights.
 
 \subsection{Changing the network architecture}
 \label{subsec:arch_change}
 
-The graphs of all of the previous experiments in this section showed a similar trend. They started off learning relatively quickly, making great progress. After the first 200,000 time steps, the progress slowed down dramatically. This could hint at the agent being too simple for the environment and not being able to learn it.
+The training progressions of the experiments in this section showed a similar trend. They started off learning relatively quickly, making significant progress. After the first 200,000 time steps, the progress slowed down dramatically. This plateauing could hint at the agent being too simple for the environment and unable to learn to interact with it optimally.
 
-Since SB3 is based on PyTorch, it is relatively simple to modify the underlying neural networks. In the default \texttt{CnnPolicy}, the actor and the critic share a feature extractor with three convolutional layers and one fully connected layer. Then, each of them has a single fully connected layer (for more detail, see Figure \ref{fig:cnn_policy}).
+Since SB3 uses PyTorch in the background, modifying the underlying neural networks is relatively simple. In the default \texttt{CnnPolicy}, the actor and the critic share a feature extractor with three convolutional layers and one fully connected layer. Then, each of them has a single fully connected layer (for more detail, see Figure \ref{fig:cnn_policy} in the Appendix).
 
-I modified the architecture by adding an extra fully connected layer to the feature extractor and two extra fully connected layers to both the actor and the critic. This meant that the model had around 6 million parameters. The new architecture can be seen in detail in Figure \ref{fig:bigger_net_policy} in the appendix.
+I modified the architecture by adding an extra fully connected layer to the feature extractor and two fully connected layers to the actor and the critic. This meant that the model now had around 6 million parameters. The new architecture is shown in more detail in the Appendix in Figure \ref{fig:bigger_net_policy}.
 
-This change helped quite a bit. It outperformed the simple networks, and it continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} shows the comparison between the bigger network and the best CNN policy model. The mean episode lengths did not differ dramatically.
+This change helped quite a bit. It outperformed the simple networks, and it continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} compares the bigger network and the best CNN policy model.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v3_cnn_vs_biggernet.pdf}
-    \caption{Comparison of the mean reward of the default \texttt{CnnPolicy} and a bigger network. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
+    \caption{Comparison of the mean reward of the default \texttt{CnnPolicy} and a bigger network. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. For better clarity, the graph contains both raw values and exponential moving averages.}
     \label{fig:v3_bigger_net}
 \end{figure}
 
-The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. While this might still sound pretty bad, note that especially with smaller objects, IoU is pretty strict. For example, if for a rectangle of size $20\times 20$, we guessed a bounding box of the correct size but shifted to the left and down by 2 pixels, the IoU would be only 0.68 even though the guess is only off by 10 percent. Another problem that brings the average down is that sometimes, when the image contained two objects far apart, the model got confused and predicted a bounding box between them repeatedly until the episode was stopped; an example of this behavior can be seen in Figure \ref{fig:v3_stuck}.
+The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. One problem that brings the average down is that sometimes when the image contained two objects far apart, the model got confused and repeatedly predicted a bounding box between them until the episode was truncated. An example of a situation where this problem occurred can be seen in Figure \ref{fig:v3_stuck}.
 
 \begin{figure}
     \centering
@@ -659,7 +661,7 @@ Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted
 \section{Switching to discrete actions}
 \label{sec:iterative}
 
-Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. \cite{rl_object_detection}~describes and compares two approaches for object detection using reinforcement learning, both using discrete action space. Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this selection repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward.
+Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. \cite{rl_object_detection}~describes and compares two approaches for object detection using reinforcement learning, both using discrete action space. Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this selection repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward. At the initial state is the entire image (scaled to some fixed size). After each action, it is modified to only include the current selection.
 
 The first method, originally described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with the same aspect ratio as the image.
 
@@ -688,7 +690,7 @@ Compared to the previous approach on the same environment, the training did take
 
 \section{Multiple rectangles with discrete actions}
 
-Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to also use discrete actions. To account for the problematic accuracy caused by too large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a low amount of steps.
+Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to also use discrete actions. To account for the problematic accuracy caused by too large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a lower amount of steps.
 
 This is the environment where, with the previous approach, I had to switch to the bigger network. This time, I went directly with the ResNet-18-based network. This combination worked really well, reaching the same reward of 2.1 in only around 700,000 time steps compared to the 10,000,000 with the previous approach, even though one episode took around 80 time steps compared to 3.5.
 
@@ -700,9 +702,9 @@ Seeing the great success of the new approach, I decided to skip all the way to t
 
 Unfortunately, even this time, the results were terrible. The agent struggled to even reach the positive reward. Since the actions described in \cite{iterative_od_with_rl} were helpful so far, I also wanted to get closer to their reward function. The main change was going from a semi-sparse function (only giving rewards for trigger actions) to a dense function (rewarding every action). This should give the agent a lot more information to learn from.
 
-I came up with the following. After each interaction find all leaf elements (with no children) that have an overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference.
+I came up with the following. After each interaction find all leaf elements (with no children) that have an overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference. The best IoU leaf is then removed. The episode ends once all nodes are removed.
 
-After some experimenting, changed the reward function for the trigger action not to give a fixed constant value but instead award 3 times the selection IoU since otherwise there would be little incentive to go past the threshold IoU of 0.5.
+After some experimenting, I changed the reward function for the trigger action not to give a fixed constant value but instead award 3 times the selection IoU since otherwise there would be little incentive to go past the threshold IoU of 0.5.
 
 \subsection{Automated hyperparameter tuning}
 
@@ -714,9 +716,63 @@ The new reward function and hyperparameters brought the average episode reward f
 
 After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20 or an IoU of almost 0.8 per object. This showed me, that the approach with discrete actions scaled well even with more objects.
 
-Interestingly, one of the tunable parameters were the sizes of the actor and critic networks. In both of the tunings, this parameter was deemed as very unimportant. In that later one, the best result was achieved using the smallest architecture of only one layer of 64 neurons. Because of this result, I reverted to the simple \texttt{CnnPolicy} provided by SB3.
+Interestingly, one of the tunable parameters was the size of the actor and critic networks. In both of the tunings, this parameter was deemed as very unimportant. In that later one, the best result was achieved using the smallest architecture of only one layer of 64 neurons. Because of this result, I reverted to the simple \texttt{CnnPolicy} provided by SB3.
 
 \section{Rectangles based on a website screenshot}
+%v8 env%
+
+The next step, now that I was able to train a model that correctly finds elements in a hierarchical environment, was to move to more realistic data. Instead of generating rectangles in random places, I wanted them to actually reflect real websites.
+
+\subsection{Dataset}
+
+Ideally, I would like to find a dataset that contains screenshots of websites along with annotations of elements on that screenshot. There are such datasets I found, for example, \cite{roboflow-dataset-1} and \cite{roboflow-dataset-2}. Unfortunately, they are usually small (at most a bit over 1,000 images), contain just the \enquote{leaf} elements (not bigger sections such as spans or divs), and often contain straight-up wrong or duplicate annotations. The whole point of this thesis is to train a DL-based model that does not need such a dataset exactly for these reasons.
+
+Instead, I chose to use a dataset that contains just the screenshots and then somehow find the approximate locations of the elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains a total of 20,000 website screenshots split into four categories: machinery, music, sport, and tourism. It offers the screenshots in two sizes, $224\times224$ pixels (too small for our use case) and $1440\times900$ pixels.
+
+For each image, I then find the elements using the following method. First, convert the image to grayscale and apply a bilateral filter. This helps to eliminate textured backgrounds that would mess up edge detection. Next, find edges using the Canny edge detection and connect close ones using morphological closing. Lastly, find connected components and filter out ones that are too small. Then, create a new black image of the same size and add white rectangles corresponding to the found objects. This leaves us with a similar result to what we generated in the last environment but based on a real website. Since the original image is not given to the model, it is not a problem if we fail to detect some of the objects.
+
+Since each image contained an average of 26 objects, the goal was to get a reward of at least 70.
+
+\subsection{Reward function}
+
+At first, I reused the same reward function as in the last environment. There, with less than 10 objects, it worked reasonably well, but here, with, on average, 30 objects it was once again unable to understand the environment and so just repeatedly placed large predictions until the episode ended.
+
+To try and combat this, I changed the logic to involve not only leaf objects. That way, if the first prediction was large and had the best IoU with the root element, the episode would end instantly. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards since the selection would become worse until it became small enough to have better IoU with another element. I thought this might confuse the agent, so I added another condition that removed the root element from these calculations unless it was the last remaining one.
+
+Unfortunately, I made an error while implementing this extra condition, where it was not the root element that was ignored but instead always the element with the best IoU. This made it so the agent actually tried to optimize the score of the second-best selection, which, unsurprisingly, made the resulting models perform rather badly. I tried to combat this with yet more automated hyperparameter tuning, frame stacking, and transferring from the last environment. While these changes did result in some minor improvements, they obviously did not solve the core issue. It took me almost two weeks before I finally debugged the reward function properly and found the mistake.
+
+After this fix, I was reaching average rewards of around 20 per episode.
+
+\subsection{Curriculum learning}
+
+Since the progress still was not great, I decided to try a method I stumbled upon in \cite{GDRL}. Curriculum learning is a technique where the agent is trained on data of increasing difficulty. Since I was still the one creating the states, this would be relatively easy to do. When making the image, I would only add the $n$ biggest bounding boxes. At the start, I set $n$ to a relatively small number (I chose three). I then started saving the given rewards into an array, and once 100 of them were collected, I would calculate the average, and if it was over some threshold (I started with 0.7), I would increase $n$ by one.
+
+After running this environment for 20,000,000 time steps, the agent did beat the previous training by about 5, but more importantly, the reward did not plateau and kept increasing even after this many time steps.
+
+Later on, I found some more errors in the environment. Namely, since the reward for non-trigger actions was calculated as a difference between the current best IoU and the last best IoU, it did not work that well on the first action after a trigger action.
+Another interesting issue was in the image scaling. Since the RL algorithms require the same-sized input every time, it was necessary to scale the selection to the state size. The problem is that based on the used interpolation method when scaling, some of the thin lines could disappear, making them invisible to the agent. Especially problematic was the fact that this scaling could be both up-scaling and down-scaling or even both, one for each axis. In the end, I solved this by scaling separately for each axis and choosing a different interpolation method based on the situation.
+
+Another problem was that I ran the evaluations on the same environment as the training. Since the evaluation was run every 10,000 time steps, it could be triggered in the middle of a training episode, leaving it in a different state.
+
+After fixing all of these issues, the agent was able to reach an average reward of 55 per episode.
+
+\subsection{Changing the evaluation metric}
+
+Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is de facto the standard for bounding box prediction evaluation compared to some ground truth. It works well in classic object detection tasks where most objects are of a similar size. But that is not the case in this problem. Some of the objects can take up most of the image, while others can take up less than 0.01 percent of the screen area (for example, the back button in Overleaf).
+
+Because of how IoU works, being off by a few pixels on small element results in a much smaller score than being a few pixels off on large elements. This is a problem because then the model spends a lot of actions trying to get the selections for small elements to be very close and often makes quite large mistakes (tens or even hundreds of pixels) on large elements. Of course, this makes perfect sense since IoU is relative and does not care about pixels, but I do.
+
+For this reason, I decided to create my own modified version of IoU which I will from now on refer to as Tolerant Intersection over Union (TIoU). This metric has an extra parameter called tolerance, which dictates how big of an absolute difference we are willing to tolerate. The edges of the compared bounding boxes are then shifted closer together by, at most, this amount. The result is then a weighted average of IoU of these modified bounding boxes and the original bounding boxes so that perfect bounding boxes are still preferred but not by so much.
+
+This change did increase the average reward, but just looking at the numbers does not bring much value. An increase in reward is to be expected since this new metric can never produce a lower value than regular IoU. Comparing the results of the two models visually, I did not notice any bigger differences.
+
+Looking at this change from the model's view, this changed metric does not bring much value since the observation is a zoomed-in view of the selection, and the agent has no memory. It is unable to know whether the current selection is of a large or small bounding box. To fix this and restore the Markov property I added the coordinates of the current selection into the state. After passing the image through a feature extractor, the four numbers are concatenated to it and given to the actor and critic networks.
+
+This change did bring significant improvements, boosting the average reward per episode to over 80 while also reducing the average time steps per episode by almost a hundred to around 750.
+
+\section{Finding objects in a real image}
+%v9 env%
+TODO
 
 \chapter{Comparison with other methods}
 TODO: Implement two solutions: one based on CNNs (probably YOLOv8 with some free dataset), one based on classical CV (finding contours).
