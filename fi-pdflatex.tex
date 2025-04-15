@@ -549,8 +549,7 @@ The resulting model took around 6 hours to train and reached a mean reward of ar
 
 \section{Different shapes}
 %v4 env%
-Now that the model was able to locate multiple rectangles in a single image with quite 
- a good accuracy, the next step was to introduce other shapes as well. This new environment was identical to the previous one, but instead of just rectangles, there could also be ellipses and triangles. Since the rules were still the same, there were an average of 3.5 objects, and their bounding boxes did not collide. Some examples of this environment can be seen in figure \ref{fig:env4}.
+Now that the model could locate multiple rectangles in a single image with quite a reasonable accuracy, the next step was introducing other shapes. This new environment was identical to the previous one, but there could also be ellipses and triangles instead of just rectangles. Since the rules were still the same, there were an average of 3.5 objects, and their bounding boxes did not collide. Figure \ref{fig:env4} shows some examples of this environment.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env4.png}
@@ -558,18 +557,18 @@ Now that the model was able to locate multiple rectangles in a single image with
     \label{fig:env4}
 \end{figure}
  
-The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results, stopping at a reward of around 1.5.
+The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results, stopping at an average reward of around 1.5.
 
-Since the problem is similar to the previous one, I again tried to use transfer learning with the best model from the previous environment for the new one. It actually started with very good results and stayed at a reward of around 2.0 for the rest of the training, only improving a little bit.
+Since the problem was similar to the previous one, I tried using transfer learning with the best model from the previous environment. It started with good results and stayed at a reward of around 2.0 for the rest of the training, only improving slightly.
 
-This showed me that it was definitely possible to get good results. But I wanted to avoid transfer learning, if possible, until the very end because if it were needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further.
+This result showed me that it was possible to get good results. However, I wanted to avoid transfer learning until the very end because, if needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further.
 
 \subsection{ResNet-18 feature extractor}
 \label{subsec:resnet}
 
-It is a common practice not to create your own feature extractor but instead to use an already existing convolutional network trained on a similar problem, remove the fully connected layers, and use the rest as a feature extractor \cite[p. 256]{DLforVisualSystems}. I wanted to try this approach.
+It is common not to create your feature extractor from scratch but instead to use one from an already existing network trained on a similar problem \cite[p. 256]{DLforVisualSystems}.
 
-ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple sizes of the architecture, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor. The architecture of ResNet-18 can be seen in Figure \ref{fig:resnet}.
+ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple architecture sizes, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor. The architecture of ResNet-18 can be seen in Figure \ref{fig:resnet}.
 
 \begin{figure}
     \centering
@@ -578,25 +577,25 @@ ResNet is a model architecture first proposed in the paper \textit{Deep Residual
     \label{fig:resnet}
 \end{figure}
 
-It contains 18 convolutional layers (hence the 18 in the name), each followed by a batch normalization layer and some by a dropout layer. An important feature of ResNet are skip connections, which help with vanishing gradients. The PyTorch implementation ends with an adaptive average pooling layer. Unlike regular pooling layers, it has the output size as a parameter and chooses the stride and kernel size automatically based on the input. This makes it so that the output has the same size regardless of the input size
+ResNet-18 is a convolutional neural network with 18 layers and residual (skip) connections that help mitigate vanishing gradients. Each convolution is typically followed by batch normalization. While the original paper ends with an average pooling layer, the PyTorch implementation uses an adaptive average pooling layer, which ensures a fixed-size output regardless of the input dimensions.
 
-A slight complication is that ResNet-18 is meant for colored images (3 channels), but we are currently using binary grayscale images (1 channel), although this might change in the future. There are multiple ways of solving this problem; the simplest is to just duplicate the one channel 3 times. I did something a bit different, adding a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates 3 feature maps from our one image. This is very similar to just duplicating the channel 3 times, but the kernel contains learnable parameters, so it is possible for the channels to be different if the network finds that useful. The entire architecture is shown in figure \ref{fig:resnet_arch} in the appendix.
+A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). There are multiple ways to solve this problem; the simplest is to duplicate the one channel 3 times. I did something different, adding a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in figure \ref{fig:resnet_arch}.
 
-It is also important to note that the ResNet-18 provided by PyTorch was pre-trained on the COCO dataset, which consists of photographs. This could mean that the knowledge won't transfer that well for binary images (and later on images of websites).
+It is also important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. This dataset differs from our use case, which could mean the knowledge will not transfer well.
 
-I tried again on the same environment. At first, I used the weights from PyTorch, and I froze them because I thought this would speed up the training. The results were very poor. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. This time, the training went much better, reaching a reward of around 2.8 in less than 2.5 million time steps. Lastly, I also wanted to test whether the pre-trained weights made any difference compared to randomly initialized weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
+I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were very poor. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. This time, the training went much better, reaching a reward of around 2.8 in less than 2.5 million time steps. Lastly, I also wanted to test whether the pre-trained weights made any difference compared to randomly initialized weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v4_resnet_graph.pdf}
-    \caption{Comparison of the mean reward of the pre-trained frozen, pre-trained fine-tunable, and not pre-trained ResNet-18 based agents with the previous architecture. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. Both the raw values and an exponential moving average are shown for better clarity.}
+    \caption{Comparison of the mean reward of the pre-trained frozen, pre-trained fine-tunable, and not pre-trained ResNet-18 based agents with the previous architecture. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. For better clarity, the graph contains both raw values and exponential moving averages.}
     \label{fig:v4_resnet_graph}
 \end{figure}
 
-While the improvement in performance was great, it also slowed down the training significantly. It took around 2.5 hours for one million time steps, which is around three times slower.
+While the performance improvement was significant, it slowed down the training notably. It took around 2.5 hours for one million time steps, which is around three times slower than before.
 
 \section{Hollow shapes}
 %env 5%
-One big simplification we are currently undertaking is, that each position in the image can belong to at most one object, which is not the case in the real problem. To be able to put one object inside others, we need to mark only its edge; otherwise, the inside object will not be visible. In this next environment, the only change is the objects being just their outlines as visible in figure \ref{fig:env5}.
+One considerable simplification we are currently undertaking is that each position in the image can belong to at most one object. To put one object inside another, we need to mark only its edge; otherwise, the inside object would not be visible. The only change in this environment is that the objects are drawn as outlines, as visible in figure \ref{fig:env5}.
 
 \begin{figure}
     \centering
@@ -610,17 +609,17 @@ This change had little to no effect on the training progression.
 \section{Bigger images}
 Poznámka: Možná tuto sekci vynechám, jakože jsou tam I zajímavý věci, ale ve výsledku jsem to pak už moc nepoužil.
 %env 6%
-At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since we only need to locate the objects, which should not require pixel-sized details, some downscaling is possible, but squashing the image all the way down to $100\times100$ pixels would likely be too much. Because of this, I wanted to experiment with larger image states.
+At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since we only need to locate the objects, which should not require pixel-sized details, some downscaling is possible, but squashing the image down to $100\times100$ pixels would likely be too much. Because of this, I wanted to experiment with larger image states.
 
-Thanks to the aforementioned adaptive average pooling layer used in the ResNet feature extractor, changing the image size would not require any large modifications of the network architecture.
+Thanks to the aforementioned adaptive average pooling layer used in the ResNet-18 feature extractor, changing the image size would not require manual network architecture modifications.
 
-Due to hardware limitations (GPU memory), the biggest image size that I was able to get running was $640\times480$ pixels, but even then, the training speed slowdown was so significant that I decided not to be so ambitious and I continued with an image size of $200\times200$ pixels (this slowed down the training around two times).
+Due to hardware limitations (GPU memory), the largest state with which I could get a training running was $640\times480$ pixels. However, even then, the training speed slowdown was so significant that I decided to continue with a state size of $200\times200$ pixels (this slowed down the training around two times).
 
-The size increase itself did not cause any big differences in the training except for the speed. But since the image was bigger it also allowed for more objects to be placed (7 on average). Unfortunately, the reward per object dropped significantly. The model learned to place large bounding box predictions in relevant areas. This did result in a positive reward most of the time but was far from optimal since it usually removed multiple objects at once. The likely cause was that the current reward function did not punish selecting multiple objects at once directly. I came up with two new ways, to calculate the reward in the case where the guess bounding box intersects multiple objects:
+The size increase did not cause significant differences in the training progression. However, since the image was bigger than before, more objects were placed (7 on average). Unfortunately, this caused the reward per object to drop significantly. The model learned to place large bounding box predictions in relevant areas. This strategy resulted in a positive reward but was far from optimal since it usually removed multiple objects simultaneously. The likely cause was that the current reward function did not punish selecting multiple objects at once directly. I came up with two new algorithms to calculate the reward in the case where the guess bounding box intersected multiple objects:
 
 \begin{itemize}
-    \item Find all objects that intersect with the guess. Find the object with the biggest overlap and calculate its IoU. Calculate the sum of the overlap areas of all the other intersecting objects with the guess, divide this sum by the guess' area, and subtract this from the IoU.
-    \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant.
+    \item Find all objects that intersect with the guess. Find the object with the biggest overlap and calculate its IoU. Calculate the sum of the overlap areas of all the other intersecting objects with the guess, divide this sum by the guess' areas, and subtract it from the IoU.
+    \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant (I chose ten).
 \end{itemize}
 
 The first option did help, bringing the per-object IoU from 0.5 to around 0.6. The second one had a very minimal impact. While IoU of 0.6 is usually considered acceptable \cite[p. 291]{DLforVisualSystems}, this experiment showed me that my current solution had problems even with an object count of less than 10, which is not acceptable since an average website probably contains closer to 100 objects.
@@ -628,147 +627,151 @@ The first option did help, bringing the per-object IoU from 0.5 to around 0.6. T
 \section{Hierarchical environment}
 \label{sec:hierarchical-env}
 
-So far all the environments comprised of objects that did not intersect in any way. They were completely independent, and thus, the order in which they were selected did not matter at all. This, of course, differs from how real websites look. They have a hierarchy of objects (one object can contain many others). The next step was to create an environment that would represent this more faithfully.
+So far, all the environments have had objects that did not intersect. They were independent; thus, the order in which they were selected did not matter. This, of course, differs from how actual websites look. They have a hierarchy of objects (one can contain many others). The next step was to create an environment that would represent this more faithfully.
 
-At first, I tried to use the same technique as before -- randomly attempting to place objects that do not overlap, but this time, I allowed such overlaps where one object was fully inside another. This did not work very well; the number of objects differed greatly between attempts, they were often placed very close to one another, and the depth of the hierarchy was very shallow. So, instead, I created a generator that directly created a tree-like structure. It starts with a root object that encloses the whole image, then it selects an area inside with a random offset to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. It is also possible to customize the maximum depth, the minimum size of an object, minimum spacing, and so on. Some examples of this new generation can be seen in figure \ref{fig:env7}
+At first, I tried to use the same technique as before -- randomly attempting to place objects that do not overlap, but this time, I allowed such overlaps where one object was entirely inside another. This strategy did not work well; the number of objects differed significantly between attempts, they were often placed very close to one another, and the depth of the hierarchy was shallow. So, instead, I created a generator that directly created a tree-like structure.
+
+The generator starts with a root object that encloses the whole image, then it selects an area inside with a random offset to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. It is also possible to customize the maximum depth, the minimum size of an object, minimum spacing, and children count. Some examples of this new generation are shown in Figure \ref{fig:env7}
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{env_examples/env7.png}
-    \caption{Four examples of the new environment}
+    \caption{Four examples of the new hierarchical environment}
     \label{fig:env7}
 \end{figure}
 
-A new reward function was needed as well. I came up with the following method. First, find all objects that the guess intersects with or fully encloses; if there are none, also include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of this object with the guess minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If there are multiple intersecting objects, then the one that is deepest in the hierarchy is chosen, and the same calculations are done. The episode ends when the root object is removed.
+A new reward function was needed as well. I came up with the following method. First, find all objects the guess intersects with or fully encloses; if none exist, include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of this object with the guess minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If multiple intersecting objects exist, the one deepest in the hierarchy is chosen, and the same calculation is performed. The episode ends when the root object is removed.
 
-I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about 2. The transferred model did perform slightly better but not by much. From the testing, it was clear that the model learned that placing long bounding boxes of width zero would almost always result in a nonnegative reward because the IoU of such bounding box is always zero, and the model did not explore enough to realize that it could do much better.
+I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about 2. The transferred model performed slightly better, but not by much. From the testing, it was clear that the model learned that placing long bounding boxes of zero width would almost always result in a nonnegative reward. The model did not explore enough to realize it could do much better.
 
 \subsection{Manual hyperparameter tuning}
 
-One thing I have not yet experimented with was hyperparameter tuning. Since I needed to encourage the model to explore more, this was a perfect opportunity. I manually tried changing each of the following parameters:
+One thing I have not yet experimented with was hyperparameter tuning. This was a perfect opportunity since I needed to encourage the model to explore more. I manually tried changing each of the following parameters:
 
 \begin{itemize}
-    \item The discount factor $\gamma$ (described in Section \ref{sec:goal}) -- By default, this parameter is set to 0.99, but in our case, discounting does not really make sense. Because of how the environment is set up, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is not needed, and $\gamma$ should be set to 1.
+    \item The discount factor $\gamma$ (described in Section \ref{sec:goal}) -- By default, this parameter is set to 0.99, but in our case, discounting does not make sense. Because of how the environment works, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is unnecessary, and $\gamma$ should be set to 1.
     \item Entropy loss coefficient $c_2$ -- The PPO loss function contains an entropy bonus that rewards less deterministic policies. Increasing it should thus lead to a more stochastic model and more exploration~\cite{PPO_paper}. By default, this hyperparameter is set to 0.
-    \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents big updates to the policy and value function, which should prevent it from \enquote{jumping off a cliff}~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
-    \item Learning rate $\varepsilon$ -- When making an update to the policy network, the gradient is multiplied by this constant. Higher learning should make the training faster, but at the same time, the jumps are bigger, which can lead to unstable learning.
+    \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents large updates to the policy and value function, which should prevent it from \enquote{jumping off a cliff}~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
+    \item Learning rate $\varepsilon$ -- When updating the policy network, the gradient is multiplied by the learning rate. A higher learning rate should make the training faster, but at the same time, the jumps are more significant, which can lead to unstable learning.
 \end{itemize}
 
-I tried both lowering and increasing each of these parameters, but unfortunately, none of the changes had a bigger positive impact. Lowering $\gamma$ and increasing the clip range did lead to slightly better results, but only by a little.
+I tried both lowering and increasing each of these parameters, but unfortunately, none of the changes had a more significant positive impact. Lowering $\gamma$ and increasing the clip range led to slightly better results, but only a little. Looking back at these attempts, I believe the problem was that I did not understand how the parameters should be changed, so I chose some values that looked good without any more sophisticated strategy.
 
-Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that did not lead to much progress. Since I did not have many ideas left on how to improve the training further, I decided to try a completely different approach.
+Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that did not lead to much progress. Since I did not have many ideas for improving the training further, I decided to try a completely different approach.
 
 \section{Switching to discrete actions}
 \label{sec:iterative}
 
-Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. \cite{rl_object_detection}~describes and compares two approaches for object detection using reinforcement learning, both using discrete action space. Both of these methods start with a bounding box spanning the entire image, and the agent chooses actions to modify this selection repeatedly until it is happy with the prediction, at which point it selects the \texttt{trigger} action, which ends the episode and grants the final reward. At the initial state is the entire image (scaled to some fixed size). After each action, it is modified to only include the current selection.
+Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. In \cite{rl_object_detection}, Samiei and Li describe and compare two previously proposed approaches for object detection using reinforcement learning, both using a discrete action space. Both of these methods start with a bounding box spanning the entire image. Then, the agent chooses actions that modify this selection repeatedly. Once the model is satisfied with the prediction,  it selects the \texttt{trigger} action, confirming the selection (and ending the episode in case of a single object detection). The initial state is the entire searched image (scaled to some fixed size). After each action, the state is modified only to include the current selection.
 
-The first method, originally described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and a stop action. It showed promising results on a single object, single class object detection, but it is unusable for our purpose since it only produces bounding boxes with the same aspect ratio as the image.
+The first method, initially described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and the trigger action. It showed promising results on a single object, single-class object detection. However, it cannot be used since it only produces bounding boxes with the same aspect ratio as the image.
 
-The second method, originally described in~\cite{iterative_od_with_rl}, uses a similar approach, but instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left and right), two for size changes (zoom in, zoom out) and two for aspect-ratio changes (making the box fatter or taller). This allows for way more flexibility, although some bounding boxes are still impossible because the changes are of some fixed size, but if this size is small enough, it should be fine as we do not need pixel-perfect predictions. An example of one episode can be seen in figure \ref{fig:exmaple_from_paper}.
+The second method initially described in~\cite{iterative_od_with_rl}, uses a similar approach. However, instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left, and right), two change the size (zoom in, zoom out) and two change the aspect-ratio (making the selection fatter or taller). These actions allow for way more flexibility, although some bounding boxes are still impossible because the changes are not continuous. However, if the size change is small enough, it should be fine, as we do not need pixel-perfect predictions. Figure \ref{fig:exmaple_from_paper} shows an example of one episode using this approach.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{diagrams/45.jpg}
-    \caption{Example of taken actions to locate and object~\cite{iterative_od_with_rl}}
+    \caption{Example of taken actions to locate an object~\cite{iterative_od_with_rl}}
     \label{fig:exmaple_from_paper}
 \end{figure}
 
-As for the observation space, it is once again an image, but this time only the part that is inside the current bounding box scaled up to some fixed size since regular RL algorithms do not allow for an input of variable size. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions, but~\cite{rl_object_detection} found that including them did not help.
+As mentioned prior, the observation space is once again an image. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions, but~\cite{rl_object_detection} found that including them did not change the outcome.
 
-I implemented a simpler version of this approach with only four actions, each of them shrinking the bounding box by some fixed percentage from one of the four sides. This simplifies the problem while keeping the ability to create predictions of any size.
+I implemented a simpler version of this approach with only four actions, each shrinking the bounding box by some fixed percentage from one of the four sides. This change simplifies the problem while keeping the ability to create predictions of any size.
 
-The suggested reward function compares the IoU of the state before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if it got worse. When the trigger action is taken, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$. \cite{rl_object_detection}~further tried changing them but did not find any improvements when they were increased.
+The suggested reward function compares the IoU of the selection before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if not. When the trigger action is selected, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$.
 
-This reward function is good for single object detection because the correct action will always improve the IoU, but when multiple objects are present, and the calculation is more complicated, this does not have to be the case. For this reason, I started my experiment with a much simpler sparse reward function, which only gives a reward for the trigger action. The reward is computed using the same calculation as in my previous environments.
+This reward function is suitable for single object detection. Unfortunately, when more than one object is present, it is difficult to determine whether the action improved the selection since it can differ for each object. For this reason, I started my experiment with a simpler semi-sparse reward function, which only rewards the trigger actions. The same calculation was used as in the continuous-action environment equivalents.
 
 \section{Single moving rectangle with discrete actions}
 
-To test this new approach, I modified the environment described in Section \ref{sec:moving_rectangle}, which contains just a single rectangle. The model learned to find the rectangle pretty quickly, but the accuracy was not great, mainly because the selection shrinking was too large (one step shrunk the bounding box by 15 \%). When I lowered it to just 5 \%, the accuracy improved, but it took way too many steps (around 60), which would later slow down the inference by a lot.
+To test this new approach, I modified the environment described in Section \ref{sec:moving_rectangle}, which contains just a single rectangle. The model learned to find the rectangle quickly, but the accuracy was not great, mainly because the selection shrinking was too large (one step shrunk the bounding box by 15 percent). The accuracy improved when I lowered it to just 5 percent, but it took way too many steps per episode (around 60), which could slow down the inference.
 
-Compared to the previous approach on the same environment, the training did take around ten times as many time steps to get to the same reward, but this was expected since suddenly a single guess required 30 to 50 time steps instead of just one.
+Compared to the previous approach in the same environment, the training did take around ten times as many time steps to get to the same reward, but this is to be expected since suddenly a single guess required 30 to 50 time steps instead of just one.
 
 \section{Multiple rectangles with discrete actions}
 
-Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to also use discrete actions. To account for the problematic accuracy caused by too large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 \% and one by just 2.5 \%. This does make the task slightly more complex but, at the same time, allows for precise predictions with a lower amount of steps.
+Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to use discrete actions. To account for the problematic accuracy caused by large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 percent and one by just 2.5 percent. This change does make the task slightly more complex but, at the same time, allows for precise predictions with a lower amount of steps.
 
-This is the environment where, with the previous approach, I had to switch to the bigger network. This time, I went directly with the ResNet-18-based network. This combination worked really well, reaching the same reward of 2.1 in only around 700,000 time steps compared to the 10,000,000 with the previous approach, even though one episode took around 80 time steps compared to 3.5.
+This is the environment where, with the previous approach, I had to switch to the bigger network. This time, I went directly with the ResNet-18-based network. This combination worked well, reaching the same reward of 2.1 in only around 700,000 time steps compared to the 10,000,000 with the previous approach, even though one episode took around 80 time steps compared to 3.5.
 
 \section{Hierarchical environment with discrete actions}
 
-Seeing the great success of the new approach, I decided to skip all the way to the hierarchical environment described in Section \ref{sec:hierarchical-env}, which I was not able to solve using continuous actions.
+Seeing the success of the new approach, I decided to skip to the hierarchical environment described in Section \ref{sec:hierarchical-env}, which I could not solve using continuous actions.
 
 \subsection{Changing to dense reward function}
 
-Unfortunately, even this time, the results were terrible. The agent struggled to even reach the positive reward. Since the actions described in \cite{iterative_od_with_rl} were helpful so far, I also wanted to get closer to their reward function. The main change was going from a semi-sparse function (only giving rewards for trigger actions) to a dense function (rewarding every action). This should give the agent a lot more information to learn from.
+Unfortunately, even this time, the results were terrible. The agent struggled even to reach positive rewards. I decided to try and get my reward function closer to the one described in~\cite{iterative_od_with_rl}. The main change was going from a semi-sparse function (only giving rewards for trigger actions) to a dense function (rewarding every action).
 
-I came up with the following. After each interaction find all leaf elements (with no children) that have an overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference. The best IoU leaf is then removed. The episode ends once all nodes are removed.
+I came up with the following. After each interaction, find all leaf elements (with no children) that overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. In both cases, remove the element. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference. The episode ends once all nodes are removed.
 
-After some experimenting, I changed the reward function for the trigger action not to give a fixed constant value but instead award 3 times the selection IoU since otherwise there would be little incentive to go past the threshold IoU of 0.5.
+After some experimenting, I changed the reward function for the trigger action not to give a fixed constant value but instead award 3 times the selection IoU since otherwise there would be no incentive to exceed the threshold IoU of 0.5.
 
 \subsection{Automated hyperparameter tuning}
 
-Since I was not seeing much progress, I decided to revisit hyperparameter tuning once more, but this time not trying to find them manually but instead using Optuna (see Section \ref{sec:optuna}).
+Since I was not seeing much progress, I decided to revisit hyperparameter tuning, but this time using Optuna (see Section \ref{sec:optuna}).
 
-I ran a study of 200 trials, each running 200,000 time steps (if not pruned earlier). This took around 24 hours, although it is good to say that the final best hyperparameters were found in trial 23 after only 3 hours. The most important hyperparameter, according to this study, was the learning rate. Optuna found, that using about a tenth of the default learning rate and decaying it linearly made quite a large difference.
+I ran a study of 200 trials, each running 200,000 time steps (if not pruned). The tuning took around 24 hours, although the final best hyperparameters were found in trial 23 after only 3 hours. According to this study, the most important hyperparameter was the learning rate. Optuna found that using about a tenth of the default learning rate with linear decay made quite a significant difference.
 
-The new reward function and hyperparameters brought the average episode reward from barely over zero to over twelve in less than one million time steps. Since the current environment generated, on average, 3.9 objects, and the maximum reward per object was 4 (1 for shrinking actions, 3 for the trigger actions), this meant an average IoU of over 0.75.
+The new reward function and hyperparameters brought the average episode reward from barely over zero to over twelve in less than one million training time steps. Since the current environment generated, on average, 3.9 objects, and the maximum reward per object was 4 (1 for shrinking actions, 3 for the trigger actions), this result meant an average IoU of over 0.75.
 
-After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20 or an IoU of almost 0.8 per object. This showed me, that the approach with discrete actions scaled well even with more objects.
+After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20 or an IoU of almost 0.8 per object. This result showed me that the approach with discrete actions scaled well even with more objects.
 
 Interestingly, one of the tunable parameters was the size of the actor and critic networks. In both of the tunings, this parameter was deemed as very unimportant. In that later one, the best result was achieved using the smallest architecture of only one layer of 64 neurons. Because of this result, I reverted to the simple \texttt{CnnPolicy} provided by SB3.
 
 \section{Rectangles based on a website screenshot}
 %v8 env%
 
-The next step, now that I was able to train a model that correctly finds elements in a hierarchical environment, was to move to more realistic data. Instead of generating rectangles in random places, I wanted them to actually reflect real websites.
+Now that I could train a model that correctly finds elements in a hierarchical environment, the next step was to move to more realistic data. Instead of generating rectangles in random places, I wanted them to reflect real websites.
 
 \subsection{Dataset}
 
-Ideally, I would like to find a dataset that contains screenshots of websites along with annotations of elements on that screenshot. There are such datasets I found, for example, \cite{roboflow-dataset-1} and \cite{roboflow-dataset-2}. Unfortunately, they are usually small (at most a bit over 1,000 images), contain just the \enquote{leaf} elements (not bigger sections such as spans or divs), and often contain straight-up wrong or duplicate annotations. The whole point of this thesis is to train a DL-based model that does not need such a dataset exactly for these reasons.
+Ideally, I would like to find a dataset containing screenshots of websites and annotations of elements on that screenshot. Such datasets exist, for example, \cite{roboflow-dataset-1} and \cite{roboflow-dataset-2}. Unfortunately, they are usually small (at most a bit over 1,000 images), contain just the \enquote{leaf} elements (not bigger sections such as spans or divs), and often contain straight-up wrong or duplicate annotations. After all, this thesis aims to train a DL-based model that does not need such a dataset precisely for these reasons.
 
-Instead, I chose to use a dataset that contains just the screenshots and then somehow find the approximate locations of the elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains a total of 20,000 website screenshots split into four categories: machinery, music, sport, and tourism. It offers the screenshots in two sizes, $224\times224$ pixels (too small for our use case) and $1440\times900$ pixels.
+Instead, I chose to use a dataset that contains just the screenshots and then somehow find the approximate locations of the elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains 20,000 website screenshots split into four categories: machinery, music, sport, and tourism (the original purpose of the dataset is to classify these categories). It offers the screenshots in two sizes, $224\times224$ pixels (too small for our use case) and $1440\times900$ pixels.
 
-For each image, I then find the elements using the following method. First, convert the image to grayscale and apply a bilateral filter. This helps to eliminate textured backgrounds that would mess up edge detection. Next, find edges using the Canny edge detection and connect close ones using morphological closing. Lastly, find connected components and filter out ones that are too small. Then, create a new black image of the same size and add white rectangles corresponding to the found objects. This leaves us with a similar result to what we generated in the last environment but based on a real website. Since the original image is not given to the model, it is not a problem if we fail to detect some of the objects.
+For each image, I then find the elements using the following method. First, convert the image to grayscale and apply a bilateral filter (which helps to eliminate textured backgrounds that would mess up edge detection). Next, locate edges using the Canny edge detection algorithm, and connect close ones using morphological closing. Lastly, find connected components and filter out ones that are too small. Then, create a new black image of the same size as the original screenshot and add white rectangles corresponding to the found objects. The result is similar to what we generated in the last environment but based on an actual website. Since the original image is not given to the model, it is not a problem if we fail to detect some objects.
 
-Since each image contained an average of 26 objects, the goal was to get a reward of at least 70.
+[TODO: image of process would be nice]
+
+I could locate an average of 26 objects per image using this method. If we aim for an IoU of 0.7 with the current reward function, the goal for this environment should be a reward of around 72 per episode.
 
 \subsection{Reward function}
 
-At first, I reused the same reward function as in the last environment. There, with less than 10 objects, it worked reasonably well, but here, with, on average, 30 objects it was once again unable to understand the environment and so just repeatedly placed large predictions until the episode ended.
+At first, I reused the same reward function as in the last environment. There, with less than 10 objects, it worked reasonably well. However, with over 20, the agent was again unable to understand the environment. The resulting model repeatedly placed large predictions until the episode ended.
 
-To try and combat this, I changed the logic to involve not only leaf objects. That way, if the first prediction was large and had the best IoU with the root element, the episode would end instantly. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards since the selection would become worse until it became small enough to have better IoU with another element. I thought this might confuse the agent, so I added another condition that removed the root element from these calculations unless it was the last remaining one.
+To combat this, I changed the logic to involve not only leaf objects. If the first prediction were large and had the best IoU with the root element, the episode would end instantly. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards. The selection would worsen until it became small enough to have better IoU with another element. This might confuse the agent, so I added another condition that removed the root element from these calculations unless it was the last remaining one.
 
-Unfortunately, I made an error while implementing this extra condition, where it was not the root element that was ignored but instead always the element with the best IoU. This made it so the agent actually tried to optimize the score of the second-best selection, which, unsurprisingly, made the resulting models perform rather badly. I tried to combat this with yet more automated hyperparameter tuning, frame stacking, and transferring from the last environment. While these changes did result in some minor improvements, they obviously did not solve the core issue. It took me almost two weeks before I finally debugged the reward function properly and found the mistake.
+Unfortunately, I made an error while implementing this extra condition, where it was not the root element that was ignored but instead always the element with the best IoU. This error caused the agent to try to optimize the score of the second-best selection, which, unsurprisingly, made the resulting models perform poorly. I attempted to redeem these results with more automated hyperparameter tuning, frame stacking, and transferring from the last environment. While these changes resulted in minor improvements, they did not solve the core issue. It took me almost two weeks to finally debug the reward function properly and find the mistake.
 
-After this fix, I was reaching average rewards of around 20 per episode.
+After this fix, I reached an average reward of around 20 per episode.
 
 \subsection{Curriculum learning}
 
-Since the progress still was not great, I decided to try a method I stumbled upon in \cite{GDRL}. Curriculum learning is a technique where the agent is trained on data of increasing difficulty. Since I was still the one creating the states, this would be relatively easy to do. When making the image, I would only add the $n$ biggest bounding boxes. At the start, I set $n$ to a relatively small number (I chose three). I then started saving the given rewards into an array, and once 100 of them were collected, I would calculate the average, and if it was over some threshold (I started with 0.7), I would increase $n$ by one.
+Since the progress still was not great, I decided to try a method I stumbled upon in \cite{GDRL}. Curriculum learning is a technique where the agent is trained on data of increasing difficulty. Since I was still the one creating the states, this would be relatively easy to do. I would only add the $n$ biggest bounding boxes when making the image. At the start, I set $n=3$. I then started saving the given rewards into an array, and once 100 of them were collected, I would calculate the average, and if it were over some threshold (I started with 0.7), I would increase $n$ by one.
 
-After running this environment for 20,000,000 time steps, the agent did beat the previous training by about 5, but more importantly, the reward did not plateau and kept increasing even after this many time steps.
+After running this environment for 20,000,000 time steps, the agent beat the previous training by about 5. However, more importantly, the reward did not plateau and kept increasing even after such long training.
 
-Later on, I found some more errors in the environment. Namely, since the reward for non-trigger actions was calculated as a difference between the current best IoU and the last best IoU, it did not work that well on the first action after a trigger action.
-Another interesting issue was in the image scaling. Since the RL algorithms require the same-sized input every time, it was necessary to scale the selection to the state size. The problem is that based on the used interpolation method when scaling, some of the thin lines could disappear, making them invisible to the agent. Especially problematic was the fact that this scaling could be both up-scaling and down-scaling or even both, one for each axis. In the end, I solved this by scaling separately for each axis and choosing a different interpolation method based on the situation.
+Later on, I found some more errors in the environment. Namely, since the reward for non-trigger actions was calculated as a difference between the current best IoU and the last best IoU, it did not work well on the first action after a trigger action.
+Another interesting issue was image scaling. Since the RL algorithms require the same-sized input every time, it was necessary to scale the selection to the state size. The problem is that based on the interpolation method used when scaling, some thin lines could disappear, making them invisible to the agent. Especially problematic was that this scaling could be both up-scaling and down-scaling or even both, one for each axis. Ultimately, I solved this by scaling separately for each axis and choosing a different interpolation method based on the situation.
 
-Another problem was that I ran the evaluations on the same environment as the training. Since the evaluation was run every 10,000 time steps, it could be triggered in the middle of a training episode, leaving it in a different state.
+Another problem was that I ran the evaluations in the same environment as the training. Since the evaluation was run every 10,000 time steps, it could be triggered in the middle of a training episode, leaving it in a different state than expected.
 
-After fixing all of these issues, the agent was able to reach an average reward of 55 per episode.
+After fixing these issues, the agent reached an average reward of 55 per episode.
 
 \subsection{Changing the evaluation metric}
 
-Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is de facto the standard for bounding box prediction evaluation compared to some ground truth. It works well in classic object detection tasks where most objects are of a similar size. But that is not the case in this problem. Some of the objects can take up most of the image, while others can take up less than 0.01 percent of the screen area (for example, the back button in Overleaf).
+Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is the standard for bounding box prediction evaluation compared to some ground truth. It works well in classic object detection tasks where most objects are of a similar size. However, that is not the case in this problem. Some objects can take up most of the image, while others can take up less than 0.01 percent of the screen area (for example, the back button in Overleaf).
 
-Because of how IoU works, being off by a few pixels on small element results in a much smaller score than being a few pixels off on large elements. This is a problem because then the model spends a lot of actions trying to get the selections for small elements to be very close and often makes quite large mistakes (tens or even hundreds of pixels) on large elements. Of course, this makes perfect sense since IoU is relative and does not care about pixels, but I do.
+IoU calculates relative errors. This behavior does not reflect our end goal. We care more about absolute differences than relative ones. An error of 2 pixels on a small element is usually not a problem even though, relative to its size, it is a lot. An error of 50 pixels is a problem even for a large element, even though it is not much relative to its size.
 
-For this reason, I decided to create my own modified version of IoU which I will from now on refer to as Tolerant Intersection over Union (TIoU). This metric has an extra parameter called tolerance, which dictates how big of an absolute difference we are willing to tolerate. The edges of the compared bounding boxes are then shifted closer together by, at most, this amount. The result is then a weighted average of IoU of these modified bounding boxes and the original bounding boxes so that perfect bounding boxes are still preferred but not by so much.
+For this reason, I decided to create my own modified version of IoU, which I will refer to as Tolerant Intersection over Union (TIoU) from now on. This metric has an extra parameter called tolerance, which dictates how big of an absolute difference we are willing to tolerate. The edges of the compared bounding boxes are then shifted closer together by, at most, this amount. The result is a weighted average of IoU of these modified bounding boxes and the original bounding boxes so that perfect bounding boxes are still preferred but not so much.
 
-This change did increase the average reward, but just looking at the numbers does not bring much value. An increase in reward is to be expected since this new metric can never produce a lower value than regular IoU. Comparing the results of the two models visually, I did not notice any bigger differences.
+This change increased the average reward, but looking at the numbers does not bring much value. An increase in reward is to be expected since this new metric can never produce a lower value than regular IoU. Comparing the results of the two models visually, I noticed no bigger differences.
 
-Looking at this change from the model's view, this changed metric does not bring much value since the observation is a zoomed-in view of the selection, and the agent has no memory. It is unable to know whether the current selection is of a large or small bounding box. To fix this and restore the Markov property I added the coordinates of the current selection into the state. After passing the image through a feature extractor, the four numbers are concatenated to it and given to the actor and critic networks.
+From the model's view, this changed metric does not bring much value since the observation is a zoomed-in view of the selection, and the agent has no memory. It cannot know whether the current selection is of a large or small bounding box. To fix this and restore the Markov property, I added the coordinates of the current selection to the state. After passing the image through a feature extractor, the four numbers are concatenated to the extracted image features and given to the actor and critic networks.
 
-This change did bring significant improvements, boosting the average reward per episode to over 80 while also reducing the average time steps per episode by almost a hundred to around 750.
+This change brought significant improvements, boosting the average reward per episode to over 80 and reducing the average time steps per episode by almost a hundred to around 750.
 
 \section{Finding objects in a real image}
 %v9 env%
