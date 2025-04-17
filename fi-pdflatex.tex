@@ -107,7 +107,11 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-TODO
+Certain graphical user interface (UI) testing tools, such as Y Soft AIVA, interact with applications purely based on visual information. To do so, they must reliably detect and localize interface elements within the captured image in order to infer the UI's hierarchical structure. Currently, this process is performed either using traditional computer vision algorithms or deep neural networks trained through supervised learning.
+
+This thesis investigates the use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, from basic shapes to full user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
+
+The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the conducted experiments, and the challenges encountered. Finally, the fifth chapter compares the RL-based detector with two prototypes developed using traditional methods.
 
 \chapter{User interface element detection}
 
@@ -149,7 +153,7 @@ The previous two sections highlight two significant challenges. Traditional CV i
 
 Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in Chapter~\ref{ch:dlr}).
 
-To my best knowledge, no author investigated multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs~\cite{dlr_object_detection, iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUIs, it should be feasible. 
+To my best knowledge, no author investigated multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUIs, it should be feasible. 
 
 \chapter{Deep reinforcement learning}
 \label{ch:dlr}
@@ -322,7 +326,7 @@ The goal is to find the optimal policy while maintaining the lowest total regret
 \section{Reinforcement learning algorithms}
 \label{sec:algos}
 
-[TODO] tady by něco mělo být
+Especially in recent years, many reinforcement learning algorithms have been published. Describing each of them in detail would not be of much use for this thesis, so the following subsections only describe the three main categories with a couple of examples.
 
 \subsection{Value-based methods}
 
@@ -330,7 +334,7 @@ The simplest approach to reinforcement learning is learning to approximate the a
 
 For simple environments with small discrete state and action spaces, it is possible to simply have a table of every state-action combination (tabular algorithms). There are many different algorithms utilizing this principle. They differ in the way they calculate the approximations (Temporal difference (TD), Monte-Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. There are also some more advanced algorithms that approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
 
-While tabular algorithms can work very well for simple environments, they are unusable for any more complex environments. Even for just a $100 \times 100$ pixel binary image, this would require a table of over $10^{72247}$ numbers.
+While tabular algorithms can work very well for simple environments, they are unusable for any more complex environments. Even for just a $100 \times 100$ pixel binary image, this would require a table of over $10^{3011}$ numbers.
 
 For these more complex environments, deep-learning is utilized; the approximator is a neural network whose loss function is calculated as the difference between the approximations and real values gathered during exploration. These methods often use a replay buffer -- a data structure that collects experience tuples from previous runs. When learning, examples are picked at random from this buffer, which somewhat minimizes the bias in data caused by the experiences from one episode not being independent. These methods include algorithms such as Neural Fitted Q-iteration (NFQ), Deep Q-Learning (DQN), and Double DQN (DDQN).
 
