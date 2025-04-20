@@ -107,11 +107,11 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-Certain graphical user interface (UI) testing tools, such as Y Soft AIVA, interact with applications purely based on visual information. To do so, they must reliably detect and localize interface elements within the captured image in order to infer the UI's hierarchical structure. Currently, this process is performed either using traditional computer vision algorithms or deep neural networks trained through supervised learning.
+Certain graphical user interface (UI) testing tools, such as Y Soft AIVA, interact with applications purely based on visual information. To do so, they must reliably detect and localize interface elements within the captured image to infer the UI's hierarchical structure. Currently, this process is performed using traditional computer vision algorithms or deep neural networks trained through supervised learning.
 
-This thesis investigates the use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, from basic shapes to full user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
+This thesis investigates the use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
 
-The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the conducted experiments, and the challenges encountered. Finally, the fifth chapter compares the RL-based detector with two prototypes developed using traditional methods.
+The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, the fifth chapter compares the RL-based detector with two prototypes developed using traditional methods.
 
 \chapter{User interface element detection}
 
@@ -149,11 +149,11 @@ A key advantage of DL-based solutions is their ability to learn complex patterns
 
 \section{Object detection with reinforcement learning}
 
-The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and DL requires a large, high-quality dataset. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. It could be possible to create a function that evaluates the quality of a bounding box prediction based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, removing the need for a dataset with manually labeled ground truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
+The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and supervised DL requires a large, high-quality\footnote{By \enquote{high-quality} I mean a dataset that is large, has accurate annotations, and includes larger enclosing elements. More in Subsection \ref{subsec:dataset}.} dataset. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. It could be possible to create a function that evaluates the quality of a bounding box prediction based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, removing the need for a dataset with manually labeled ground truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
 
 Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in Chapter~\ref{ch:dlr}).
 
-To my best knowledge, no author investigated multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUIs, it should be feasible. 
+To the best of my knowledge, no author has investigated multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUIs, it should be feasible. 
 
 \chapter{Deep reinforcement learning}
 \label{ch:dlr}
@@ -163,7 +163,7 @@ To understand the terminology used and decisions made in the following chapters,
 Unless stated otherwise, the notation and information used in this chapter are from the book \textit{Grokking Deep Reinforcement Learning} by Miguel Morales~\cite{GDRL}.
 
 \section{Machine learning}
-Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but they are usually just modifications of the three main categories.}~\cite{IB031}.
+Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but they are usually just modifications or combinations of the three main categories.}~\cite{IB031}.
 
 In supervised learning (SL), the goal is to learn to make predictions when the correct answers are available during training. This is ideal for classification or regression, where the correct labels are known (be it from human labeling, automated data collection, or some other method)~\cite{IB031}.
 
@@ -174,7 +174,7 @@ Similar to SL, reinforcement learning involves learning a mapping from inputs to
 \section{Reinforcement learning}
 Reinforcement learning problems are composed of two entities that interact -- the agent and the environment. The agent is the algorithm taught to make decisions. The environment is everything else -- if the goal is to drive a car, then the environment contains all the other cars, their movement, the roads, pedestrians, and also the car the agent is controlling. The agent tries to interact with the environment in such a way that maximizes the reward.
 
-The typical interaction between agent and environment in RL follows a cycle. In the beginning, the environment is in some initial state. The agent observes the state (note that the observation can contain only a part of the state) and, based on this observation, decides to perform an action. The environment reacts to this action, changing its inner state. The agent observes this new state and also receives a reward based on the action. The agent can then learn based on this feedback and change its behavior. It then again chooses an action, and the cycle repeats as shown in figure \ref{fig:rl-cycle}.
+The typical interaction between agent and environment in RL follows a cycle shown in Figure \ref{fig:rl-cycle}. In the beginning, the environment is in some initial state. The agent observes the state (note that the observation can contain only a part of the state) and, based on this observation, decides to perform an action. The environment reacts to this action, changing its inner state. The agent observes this new state and also receives a reward based on the action. The agent can then learn based on this feedback and change its behavior. It then again chooses an action, and the cycle repeats.
 
 \begin{figure}
     \centering
@@ -204,11 +204,15 @@ $p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}
 \begin{equation}
 p(s' \mid s,a)=P(S_t=s'\mid S_{t-1}=s,A_{t-1}=a)    
 \end{equation}
+The sum of all transition probabilities for each individual state-action pair has to equal one:
 \begin{equation}
 \sum_{s'\in S} p(s'\mid s,a)=1, \forall s \in S, \forall a \in A
 \end{equation}
 
-In practice, some action a might not be possible in a state $s$, but this can be solved by setting the probability of $p(s\mid s, a) = 1$ and $p(s' \mid  s, a) = 0, \forall s'\in S \setminus s$ -- the MDP will \enquote{transition} back into the original state with a probability of one if such action is chosen.
+If the environment does not allow for some action $a$ to be performed in state $s$, we define a degenerate transition distribution for that state-action pair:
+\begin{equation}
+    p(s'\mid s, a) =\begin{cases}1 & s' = s\\0 & \text{otherwise} \end{cases} 
+\end{equation}
 
 Lastly, $r$ is the reward function. Depending on the use case, it can be defined either as $r\colon S \times A \to \mathbb{R}$ \cite{PA230} -- the expected reward for choosing action $a$ in state $s$:
 \begin{equation}
@@ -239,13 +243,11 @@ P(S_{t+1}\mid S_t,A_t)=P(S_{t+1}\mid S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
 \end{equation}
 An example of an environment that breaks this property could be the game of Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}} where the state is only the current frame. From just one frame, it is not possible to know in which direction or at what speed the ball will move after the next input. This can, of course, be easily fixed by including not only the position but also the speed and direction of the ball in the state (or using other techniques such as frame-stacking, where multiple frames are included in the observation). In real-world scenarios, fully capturing movement may require including higher-order dynamics like acceleration or jerk. However, in practice, modeling up to acceleration is typically sufficient for most RL tasks.
 
-\subsection{MDP modifications}
-It should be mentioned that there are many possible extensions for MDPs that could be necessary for representing actual environments, such as MDPs with continuous time, which do not operate on discrete time steps, or multi-agent MDPs, which allow multiple agents to interact with the environment at the same time.
-
-One important extension is s partially observable MDP (POMDP). As mentioned earlier, in most cases, the agent does not receive the entire state of the environment it interacts with, but only some part of it -- an observation. To account for this, two more properties are added into the tuple defining the MDP -- $\mathcal{O}$ and $\epsilon$. $\mathcal{O}$ is the set of all possible observations -- an observation space. $\epsilon$ is a function $S \to \mathcal{D}(\mathcal{O})$ -- for a given state $s$ it returns a probability distribution over the observation space. However, to make things simpler, we will consider only regular MDPs for the rest of this chapter.
+\subsection{Partially observable MDPs}
+Regular MDPs can be somewhat limiting when modeling real-life scenarios, but many modifications exist that solve some of the issues. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
 
 \section{Policy}
-Now that the environment is formally defined using a MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As already mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$, and since the ending state of one experience and the initial state of the following experience is always the same, we can write it only once: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just won't give any reward or transition the environment into a different state. History is then some prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$. The agent has to make the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
+Now that the environment is formally defined using an MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As already mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$, and since the ending state of one experience and the initial state of the following experience is always the same, we can write it only once: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just won't give any reward or transition the environment into a different state. History is then some prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$. The agent has to make the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
 
 If we assume that the Markov property is fulfilled, we can simplify policy to just $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can be memoryless as well. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might be helpful to differentiate between them).
 
@@ -265,7 +267,7 @@ Finally, the expected discounted cumulative reward. As stated before, the enviro
 
 \section{Value functions}
 
-For a given policy $\pi$, we can calculate its value functions. These are functions that describe how this policy performs in some given environment. They can be used to compare policies with one another or used for learning purposes.
+For a given policy $\pi$, we can calculate its value functions. These are functions that describe how this policy performs in some given environment. They can be used to compare policies with one another or used for learning purposes (see Subsection \ref{subsec:value-based-methods}).
 
 \subsection{State-value function}
 \label{subsec:state_value_func}
@@ -329,6 +331,7 @@ The goal is to find the optimal policy while maintaining the lowest total regret
 Especially in recent years, many reinforcement learning algorithms have been published. Describing each of them in detail would not be of much use for this thesis, so the following subsections only describe the three main categories with a couple of examples.
 
 \subsection{Value-based methods}
+\label{subsec:value-based-methods}
 
 The simplest approach to reinforcement learning is learning to approximate the action-value function (either directly or calculating it using the state-value and advantage-value functions) and then using a greedy policy that selects the best action based on these approximations.
 
@@ -354,7 +357,7 @@ Actor-critic methods combine the strengths of both value-based and policy-based 
 
 The previous chapter briefly explained the theory and terminology behind RL. This chapter follows up with an introduction to RL libraries and their usage. It should give enough context to make the source code of the experiments done in this thesis understandable.
 
-As with most machine learning tasks, Python is the most popular programming language for RL, which is why I decided to use it in this thesis. AIVA is written mostly in .NET, but this should not be a problem since most machine learning libraries allow export into a common format such as ONNX\footnote{\url{https://onnx.ai/}} so that agents trained in Python can also be run natively in most other programming languages.
+As with most machine learning tasks, Python is one of the most popular programming languages for RL, which is why I decided to use it in this thesis. AIVA is written mostly in .NET, but this should not be a problem since most machine learning libraries allow export into a common format such as ONNX\footnote{\url{https://onnx.ai/}} so that agents trained in Python can also be run natively in many other programming languages.
 
 \section{Gymnasium}
 \label{sec:gym}
@@ -488,7 +491,7 @@ The following environment was, once again, very similar, the only exception bein
 
 This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture (shown in detail in Figure \ref{fig:mlp_policy} in the Appendix). The network has fewer parameters (1.3 million compared to 2.7 million), but for such a simple problem, that could still be more than enough.
 
-The MLP-based policy outperformed the CNN-based one and seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in figure \ref{fig:v2_mlp_cnn}.
+The MLP-based policy outperformed the CNN-based one and seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in Figure \ref{fig:v2_mlp_cnn}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v2_mpl_cnn.pdf}
@@ -583,7 +586,7 @@ ResNet is a model architecture first proposed in the paper \textit{Deep Residual
 
 ResNet-18 is a convolutional neural network with 18 layers and residual (skip) connections that help mitigate vanishing gradients. Each convolution is typically followed by batch normalization. While the original paper ends with an average pooling layer, the PyTorch implementation uses an adaptive average pooling layer, which ensures a fixed-size output regardless of the input dimensions.
 
-A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). There are multiple ways to solve this problem; the simplest is to duplicate the one channel 3 times. I did something different, adding a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in figure \ref{fig:resnet_arch}.
+A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). There are multiple ways to solve this problem; the simplest is to duplicate the one channel 3 times. I did something different, adding a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in Figure \ref{fig:resnet_arch}.
 
 It is also important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. This dataset differs from our use case, which could mean the knowledge will not transfer well.
 
@@ -599,7 +602,7 @@ While the performance improvement was significant, it slowed down the training n
 
 \section{Hollow shapes}
 %env 5%
-One considerable simplification we are currently undertaking is that each position in the image can belong to at most one object. To put one object inside another, we need to mark only its edge; otherwise, the inside object would not be visible. The only change in this environment is that the objects are drawn as outlines, as visible in figure \ref{fig:env5}.
+One considerable simplification we are currently undertaking is that each position in the image can belong to at most one object. To put one object inside another, we need to mark only its edge; otherwise, the inside object would not be visible. The only change in this environment is that the objects are drawn as outlines, as visible in Figure \ref{fig:env5}.
 
 \begin{figure}
     \centering
@@ -729,6 +732,7 @@ Interestingly, one of the tunable parameters was the size of the actor and criti
 Now that I could train a model that correctly finds elements in a hierarchical environment, the next step was to move to more realistic data. Instead of generating rectangles in random places, I wanted them to reflect real websites.
 
 \subsection{Dataset}
+\label{subsec:dataset}
 
 Ideally, I would like to find a dataset containing screenshots of websites and annotations of elements on that screenshot. Such datasets exist, for example, \cite{roboflow-dataset-1} and \cite{roboflow-dataset-2}. Unfortunately, they are usually small (at most a bit over 1,000 images), contain just the \enquote{leaf} elements (not bigger sections such as spans or divs), and often contain straight-up wrong or duplicate annotations. After all, this thesis aims to train a DL-based model that does not need such a dataset precisely for these reasons.
 
