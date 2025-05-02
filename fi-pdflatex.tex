@@ -61,9 +61,8 @@
     keywords    = {TODO, keyword2, ...},
     TeXkeywords = {TODO, keyword2, \ldots},
     abstract    = {%
-      This is the abstract of my thesis, which can
 
-      span multiple paragraphs.
+    This thesis assesses the feasibility of using deep reinforcement learning for detecting graphical user interface elements in web application screenshots. It does so by creating and training agents on environments of increasing difficulty that resemble the actual problem. Finally, it compares the resulting model with two prototypes developed using the usual approaches (traditional computer vision and deep supervised learning). We conclude that while training such a model using only reinforcement learning is possible, it does not bring many benefits for this particular problem.
     },
     thanks      = {%
       These are the acknowledgements for my thesis, which can
@@ -107,19 +106,19 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications purely based on visual information. To do so, they must reliably detect and localize interface elements within the captured image to infer the UI's hierarchical structure. Currently, this process is performed using traditional computer vision algorithms or deep neural networks trained through supervised learning.
+Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications solely based on visual information. To achieve this, they must reliably detect and localize interface elements in the captured image in order to infer the UI's hierarchical structure. This process is typically carried out using traditional computer vision algorithms or deep neural networks trained via supervised learning.
 
-This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
+This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity are created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, ranging from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
 
-The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, the fifth chapter compares the RL-based detector with two prototypes developed using traditional methods.
+The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, in the fifth chapter, the proposed approach is compared with traditional methods, with particular emphasis on implementation complexity and data requirements.
 
 \chapter{User interface element detection}
 
-Y Soft AIVA\footnote{\url{https://www.ysoft.com/aiva}} is a software solution for automated end-to-end testing of web applications. Unlike most competitors, AIVA does not interact with the web page's Document Object Model (DOM). Instead, it relies entirely on visual information. This approach closely resembles how a real user interacts with the application (black-box testing) and enhances robustness in specific scenarios, such as when XPaths change due to newly added components. However, it also presents many challenges since all the information must be extracted from an image instead of a markup language.
+YSoft AIVA\footnote{\url{https://www.ysoft.com/aiva}} is a tool for automated end-to-end testing of web applications. Unlike most competing tools, AIVA does not interact with the web page's Document Object Model (DOM). Instead, it relies entirely on visual information. This approach resembles black-box testing, as it mirrors how a real user interacts with the application, and enhances robustness in scenarios, such as when XPaths change due to newly added components. However, it introduces significant challenges, as all relevant information must be extracted from images rather than a structured markup language.
 
-A crucial aspect of data extraction is identifying the location, size, and hierarchical relationships of all key interactable elements on a web page (e.g., buttons, icons, text fields). If this step is done correctly, it allows AIVA to reconstruct the DOM and localize correct elements during test execution.
+A crucial aspect of data extraction is identifying the location, size, and hierarchical relationships of all key interactive elements on a web page (e.g., buttons, icons, text fields). If performed correctly, it allows AIVA to reconstruct the DOM and localize correct elements during test execution.
 
-This process can be approached using both detection and segmentation, as most objects on a webpage are rectangular. However, due to the hierarchical nature of the DOM, detection is a more intuitive choice, as a single pixel can belong to multiple overlapping elements. That said, the detected information can be converted into a segmentation map if needed. This correspondence is visible in Figure~\ref{fig:example-result}.
+This task can be addressed through either object detection or segmentation, as most objects on a web page are rectangular. However, due to the hierarchical nature of the DOM, detection is the more intuitive choice. A single pixel can belong to multiple overlapping elements, which complicates segmentation. That said, the detected information can be converted into a segmentation map if needed. This relationship is illustrated in Figure~\ref{fig:example-result}.
 
 \begin{figure}
     \centering
@@ -128,52 +127,52 @@ This process can be approached using both detection and segmentation, as most ob
     \label{fig:example-result}
 \end{figure}
 
-Graphical user interface (GUI) object detection is usually done using traditional computer vision (CV), deep learning-based object detection models such as R-CNNs or YOLO, or by a combination of both (for example, using a deep learning (DL) model for text and image detection and CV for the rest)~\cite{ODforGUI_CV_DL_or_both}. This chapter looks at both approaches, some existing solutions based upon them, and the challenges they present. Finally, a third approach that could solve these problems is proposed based on deep reinforcement learning.
+Graphical user interface (GUI) object detection is usually performed using traditional computer vision (CV), deep learning-based object detection models such as R-CNNs or YOLO. A combination is also possible, for example, using a deep learning (DL) model for text and image detection and CV for the rest~\cite{ODforGUI_CV_DL_or_both}. This chapter looks at both approaches, some existing solutions based upon them, and the challenges they present. Finally, a third approach that could solve these problems is proposed based on deep reinforcement learning.
 
 \section{Traditional computer vision-based solutions}
 \label{sec:traditionalCV}
 
-The term \enquote{traditional computer vision} is used in this thesis to describe algorithms for digital image processing that do not utilize machine learning, instead operating on a pixel-by-pixel basis. Tradition CV is challenging to use for object detection in photographs due to noise and unclear edges but is well-suited for processing user interfaces. Screenshots usually do not contain any noise (at most, some compression artifacts might be present), and edges are clearly defined.
+In this thesis, the term \enquote{traditional computer vision} refers to digital image processing algorithms that do not use machine learning but operate directly on pixel data. Traditional CV is challenging to use for object detection in photographs due to noise and unclear edges. However, it is well-suited for processing user interfaces. Screenshots typically lack noise (aside from occasional compression artifacts) and contain clearly defined edges
 
-The most common technique is using an edge detection method (e.g., Canny or Sobel edge detection) followed by some extra processing to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. This process is then commonly combined with results from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. We can find this exact process in algorithms such as REMAUI~\cite{remaui} (a program for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
+A common approach involves applying an edge detection method (e.g., Canny or Sobel), followed by post-processing steps to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The resulting edge data are often combined with outputs from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. This process is employed in algorithms such as REMAUI~\cite{remaui} (a tool for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
 
-Template matching is another approach for localization, but it lacks flexibility. It works reliably for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed GUI style). However, it is ineffective for mobile or web applications where GUI components vary widely in design~\cite{ODforGUI_CV_DL_or_both}.
+Template matching represents another localization approach, though it lacks flexibility. It works reliably for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed GUI style). However, it is ineffective for mobile or web applications where GUI components vary widely in design~\cite{ODforGUI_CV_DL_or_both}.
 
-Even today, with the rapid progress in deep learning, traditional CV still offers some benefits compared to it. It can be much more efficient and straightforward to understand, making it much easier to modify and debug. We can observe the results of each step of the algorithm, see what went wrong, and adjust parameters and thresholds accordingly. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which often require a lot of manual labor to create. This reliance also means DL-based models can become obsolete if the design trends of GUIs change~\cite{DLvsTCV}.
+Despite recent advances in deep learning, traditional CV continues to offer several advantages. It can be much more efficient and straightforward to understand, making it easier to modify and debug. Each step of the algorithm can be observed, facilitating debugging and parameter adjustment. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which often require a lot of manual labor to create. Furthermore, this reliance increases the risk of obsolescence, as DL-based models may not generalize well to evolving GUI design trends~\cite{DLvsTCV}.
 
-\section{Deep learning-based solutions}
-In the last ten years, state-of-the-art object detection algorithms have been almost solely based on deep neural networks with convolutional layers. Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO) are the two most prominent model families. Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case~\cite{ObjectDetectionHistorySurvey}.
+\section{Supervised deep learning-based solutions}
+Over the past decade, state-of-the-art object detection algorithms have relied almost exclusively on deep neural networks incorporating convolutional layers. Two of the most prominent model families are Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO). Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case~\cite{ObjectDetectionHistorySurvey}.
 
-An example of a deep learning-based GUI element detection algorithm is OmniParser\footnote{\url{https://microsoft.github.io/OmniParser/}}~, a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to improve the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}. In~\cite{GUI_YOLO_comparison}, Daneshvar et al. tried training different YOLO architectures for GUI element detection with good results. When AIVA was primarily used to test physical devices with touch screens, it used a model based on the Single Shot Detection architecture for element detection~\cite{Horak2020thesis}.
+One example of a deep learning-based GUI element detection algorithm is OmniParser\footnote{\url{https://microsoft.github.io/OmniParser/}}, a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to enhance the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}. Daneshvar et al.~\cite{GUI_YOLO_comparison} evaluated various YOLO architectures for GUI element detection, achieving promising results. During its earlier use for testing physical touchscreen devices, AIVA employed a model based on the Single Shot Detection (SSD) architecture~\cite{Horak2020thesis}.
 
-A key advantage of DL-based solutions is their ability to learn complex patterns from data without explicit programming or manual tuning for a specific domain. However, as stated in the previous section, this reliance on a dataset is also one of the main drawbacks. Both training and inference are also more hardware demanding than most traditional CV algorithms~\cite{DLvsTCV}.
+A major advantage of DL-based approaches lies in their ability to automatically learn complex patterns from data, without requiring explicit programming or manual domain-specific tuning. However, as stated in the previous section, this reliance on a dataset is also one of the main drawbacks. Moreover, both training and inference phases typically require significantly more computational resources than traditional CV algorithms~\cite{DLvsTCV}.
 
 \section{Object detection with reinforcement learning}
 
-The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, and supervised DL requires a large, high-quality\footnote{By \enquote{high-quality} I mean a dataset that is large, has accurate annotations, and includes larger enclosing elements. More in Subsection \ref{subsec:dataset}.} dataset. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. It could be possible to create a function that evaluates the quality of a bounding box prediction based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, removing the need for a dataset with manually labeled ground truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
+The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, while supervised DL methods require access to large, high-quality datasets\footnote{By \enquote{high-quality} I mean a dataset that is large, has accurate annotations, and includes larger enclosing elements. More in Subsection \ref{subsec:dataset}.}. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. One possible solution involves creating a function that evaluates bounding box prediction quality based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, thus eliminating the need for manually labeled ground-truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
 
 Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in Chapter~\ref{ch:dlr}).
 
-To the best of my knowledge, no author has investigated multi-object detection using reinforcement learning. However, there have been papers on using it to detect a single object in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUIs, it could be feasible. 
+To the best of my knowledge, no author has investigated multi-object detection using reinforcement learning. Nonetheless, prior studies have examined its use for single-object detection in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning since creating a CV-based reward function for photographs would be very difficult. However, for GUI environments, such an approach may be feasible.
 
 \chapter{Deep reinforcement learning}
 \label{ch:dlr}
 
-To understand the terminology used and the decisions made in the following chapters, it is important to grasp the theory behind reinforcement learning and machine learning in general. This chapter should provide enough information to understand the rest of this thesis. Please note that it is only a brief, non-exhaustive introduction to the topic; only the most important algorithms and definitions are provided.
+The theory behind reinforcement learning is essential for understanding the terminology and decisions presented in the following chapters. This chapter provides the necessary background to understand the remainder of this thesis. Note that this is a brief, non-exhaustive introduction covering only the most important algorithms and definitions.
 
-Unless stated otherwise, the notation and information used in this chapter are from the book \textit{Grokking Deep Reinforcement Learning} by Miguel Morales~\cite{GDRL}.
+Unless stated otherwise, the notation and information used in this chapter are adopted from \textit{Grokking Deep Reinforcement Learning} by Miguel Morales~\cite{GDRL}.
 
 \section{Machine learning}
-Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but they are usually just modifications or combinations of the three main categories.}~\cite{IB031}.
+Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but these are generally considered modifications or combinations of the three primary categories.}~\cite{IB031}.
 
-In supervised learning (SL), the goal is to learn to make predictions when the correct answers exist and are available during training (classification, regression). In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This approach can be used to, for example, separate the data into groups (clustering) or to generate new data similar to the provided examples (autoencoders, generative adversarial networks) \cite{IB031, PV021}.
+In supervised learning (SL), the goal is to make predictions based on labeled data available during training, such as in classification or regression tasks. In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This approach can be used to, for example, separate the data into groups (clustering) or to generate new, similar data using models such as autoencoders or generative adversarial networks~\cite{IB031, PV021}.
 
-Similar to SL, reinforcement learning involves learning a mapping from inputs to outputs. However, unlike in SL, where the correct labels are provided for training purposes, RL relies only on the feedback from a reward function. This function evaluates the agent's actions based on their outcomes, providing scalar feedback indicating their quality. The agent aims to learn to make decisions that maximize this reward through trial and error. RL is ideal for decision-making, especially in environments where we do not have access to the optimal strategy.
+Similar to SL, reinforcement learning involves learning a mapping from inputs to outputs, but differs fundamentally in the type of feedback provided. Unlike in SL, where the correct labels are provided for training purposes, RL relies only on the feedback from a reward function. This function evaluates the agent's decisions based on their outcomes, by providing scalar feedback that reflects the quality of the chosen actions. The agent aims to learn to make decisions that maximize this reward through trial and error. RL is ideal for decision-making, especially in environments where the optimal strategy is unknown or difficult to obtain.
 
 \section{Reinforcement learning}
-Reinforcement learning problems are composed of two entities that interact -- the agent and the environment. The agent is the algorithm taught to make decisions. The environment is everything else -- if the goal is to drive a car, then the environment contains all the other cars, their movement, the roads, pedestrians, and the car the agent controls. The agent tries to interact with the environment in such a way that maximizes the reward.
+Reinforcement learning problems consist of two interacting entities: the agent and the environment. The agent is the algorithm taught to make decisions. The environment comprises everything external to the agent. For example, in a driving task, the environment includes other vehicles, road conditions, pedestrians, and the controlled car itself.
 
-The typical interaction between agent and environment in RL follows a cycle shown in Figure \ref{fig:rl-cycle}. In the beginning, the environment is in some initial state. The agent observes the state (note that the observation can contain only a part of the state) and chooses an action it thinks is the best. The environment receives and reacts to this choice, changing its inner state. The agent observes this new state and gets rewarded based on the chosen action. It can then learn based on this feedback and change its behavior. Then, it again chooses an action, and the cycle repeats.
+The typical interaction between agent and environment in RL follows a cycle, as illustrated in Figure \ref{fig:rl-cycle}. In the beginning, the environment is in some initial state. The agent observes the state (although in many cases, it may only have access to a partial observation of the full state) and chooses an action it thinks is the best. The environment receives and reacts to this choice, changing its inner state. The agent observes this new state and gets rewarded based on the chosen action. The agent can then update its behavior based on this feedback. Then, it again chooses an action, and the cycle repeats.
 
 \begin{figure}
     \centering
@@ -182,30 +181,30 @@ The typical interaction between agent and environment in RL follows a cycle show
     \label{fig:rl-cycle}
 \end{figure}
 
-One iteration of this cycle is called a time step, and it creates an experience -- a tuple of the original state $s$, the action taken $a$, the reward given $r$, and the new state $s'$. Depending on the task, this cycle can repeat forever or end once the environment reaches some terminal state. For example, in a chess game, the end is defined as winning, losing, or a draw. We call such tasks episodic, and all the experiences collected from the initial to the terminal states form an episode. If there is no well-defined end, we call the task continuous.
+A single iteration of this cycle is referred to as a time step and generates an experience -- a tuple of the original state $s$, the action taken $a$, the reward given $r$, and the new state $s'$. Depending on the task, the cycle may continue indefinitely or terminate once the environment reaches a designated terminal state. For example, in a chess game, the end is defined as winning, losing, or a draw. Such tasks are called episodic, with all experiences from the initial to the terminal state forming an episode. If there is no well-defined end, the task is referred to as continuous.
 
-The reward function can be either dense or sparse (or something in between). A dense reward function awards the agent a non-zero reward in each iteration of the RL cycle. A sparse reward function only gives a non-zero reward when the environment transitions into a terminal state. While dense reward functions are generally easier to learn from, in some cases, they can be challenging to implement. In the chess example, we know that losing is bad and winning is good, but judging a single move is problematic unless we know the optimal strategy.
+The reward function may be dense, sparse, or lie somewhere in between. A dense reward function awards the agent a non-zero reward in each iteration of the RL cycle. A sparse reward function only gives a non-zero reward when the environment transitions into a terminal state. While dense reward functions are generally easier to learn from, in some cases, they can be challenging to implement. In the chess example, we know that losing is negative and winning is positive, but judging a single move is problematic unless we know the optimal strategy.
 
 Reinforcement learning is challenging due to the sequential, evaluative, and sampled feedback.
 
-The sequentiality comes from most of the tasks being multiple steps long. The consequences of an action might not be apparent immediately. When an episode ends with a very negative result, it can be difficult to determine which of the preceding actions is the cause, as it is often not the last action taken.
+The sequentiality comes from the fact that most tasks span multiple time steps. The consequences of an action might not be immediately apparent. When an episode ends with a very negative result, it can be difficult to determine which of the preceding actions is the cause, as it is often not the last action taken.
 
-Feedback being evaluative means that the reward given is just a scalar value. Without additional context, it is impossible to know if the received reward was the best possible and if we should thus repeat the decision in similar states or whether it was terrible and should be avoided in the future. This issue leads to the need for exploration discussed in Section~\ref{sec:eplor-exploit}.
+Evaluative feedback refers to the reward being provided as a scalar value. Without additional context, it is impossible to know if the received reward was the best possible and if we should thus repeat the decision in similar states or whether it was terrible and should be avoided in the future. This issue leads to the need for exploration discussed in Section~\ref{sec:eplor-exploit}.
 
 The agent can only learn from the states it has visited and the actions it has taken, thus the feedback it gets is sampled. In many real-life RL problems, there are so many states that trying every combination of state and action is impossible. This challenge also exists in supervised learning, as the dataset will never contain all the data we might encounter. However, in reinforcement learning, this is even worse as the agent must collect all the data on its own.
 
 \section{Markov decision process}
-In order to define RL and its goal, we first have to define the environment. There are multiple ways to do so, but the most common representation is a Markov decision process (MDP). An MDP is defined as a tuple $(S, A, p, r)$.
+In order to define RL and its objective, it is first necessary to define the environment. There are multiple ways to do so, but the most common representation is a Markov decision process (MDP). An MDP is defined as a tuple $(S, A, p, r)$.
 
 $S$ is the state space, a set of all possible environment states. It can contain both discrete and continuous values. At each time step $t$, the MDP is in a state $s_t\in S$.
 
-$A$ is the action space, a set of all possible actions an agent can perform in this MDP. Again, it can be discrete, continuous, or a combination of both. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
+$A$ is the action space, a set of all possible actions an agent can perform in this MDP. It may also be discrete, continuous, or a combination of both. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
 
-$p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$ that, for a given state $s\in S$ and a given action $a\in A$, returns a probability distribution over the states $s'\in S$ which tells us the probability of the MDP transitioning from the state $s$ to a state $s'$ given that action $a$ was selected. Formally, it is defined as:
+$p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$. For a given state $s\in S$ and a given action $a\in A$, it returns a probability distribution over the states $s'\in S$. It tells us the probability of the MDP transitioning from the state $s$ to a state $s'$ given that an action $a$ was selected. Formally, it is defined as:
 \begin{equation}
 p(s' \mid s,a)=P(S_t=s'\mid S_{t-1}=s,A_{t-1}=a)    
 \end{equation}
-The sum of all transition probabilities for each individual state-action pair has to equal one:
+The sum of all transition probabilities for each individual state-action pair must equal one:
 \begin{equation}
 \sum_{s'\in S} p(s'\mid s,a)=1, \forall s \in S, \forall a \in A
 \end{equation}
@@ -226,27 +225,27 @@ r(s, a, s')= \mathbb{E} [R_t\mid S_{t-1}=s, A_{t-1}=a, S_t=s']
 
 Another property often defined is the set of initial states $S^i \subseteq S$. When an MDP is initialized, the initial state is chosen from this subset using a probability distribution $\mathcal{I}$ over these states.
 
-Similarly, a set of all terminal states can be defined. The MDP ends when it transitions into one of the terminal states. This property can be omitted if the transition function is defined so that every transition from a terminal state has a probability of 1 of transitioning back into the state itself, and by ensuring that such a transition always has a reward of 0.
+Similarly, a set of all terminal states may be defined. The MDP terminates when it transitions into one of the terminal states. Alternatively, the explicit definition of terminal states can be omitted by modeling them as absorbing states. This involves defining the transition function such that any action taken in a terminal state leads back to that same state with a probability of 1, and ensuring the reward for such transitions is 0.
 
-Simple MDPs can be visualized as diagrams, as visible in Figure \ref{fig:mdp}.
+Simple Markov decision processes can be visualized as diagrams, as illustrated in Figure \ref{fig:mdp}.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{diagrams/mdp.pdf}
-    \caption{An example of a graphical representation of a Markov decision process. Squares depict terminal states. Transition probabilities are purple; rewards are green.}
+    \caption{An example of a graphical representation of a Markov decision process. Squares depict terminal states. Transition probabilities (purple) and rewards (green) are indicated.}
     \label{fig:mdp}
 \end{figure}
 
 \subsection{Markov property}
 \label{subsec:markov_property}
-Notice that the probabilistic transition function $p$ only takes the current state and action as inputs. Importantly, it does not consider history. The probability of transitioning from a state $s$ to a state $s'$ under an action $a$ depends only on $s$ and $a$, not on how the MDP arrived at $s$. This memorylessness of MDPs is known as the Markov property, and it is important to remember when implementing an environment since many RL algorithms rely on the environment to fulfill the Markov property. It can be formally defined as
+The probabilistic transition function $p$ only takes the current state and action as inputs. Importantly, it does not consider history. The probability of transitioning from a state $s$ to a state $s'$ under an action $a$ depends only on $s$ and $a$, not on how the MDP arrived at $s$. This memorylessness of MDPs is known as the Markov property. It is important to remember when implementing an environment since many RL algorithms rely on the environment to satisfy the Markov property. It can be formally defined as
 \begin{equation}
 P(S_{t+1}\mid S_t,A_t)=P(S_{t+1}\mid S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
 \end{equation}
-An example of an environment that breaks this property could be the game of Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. From just one frame, it is impossible to know in which direction or at what speed the ball will move after the following input. This problem can, of course, be easily fixed by including the position, speed, and direction of the ball in the state (or using other techniques such as frame-stacking, where multiple frames are included in the observation). In real-world scenarios, fully capturing movement may require including higher-order dynamics like acceleration or jerk. However, modeling up to acceleration is typically sufficient for most RL tasks.
+An example of an environment that violates this property could be the game of Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. From just one frame, it is impossible to know in which direction or at what speed the ball will move after the next action. This problem can, of course, be resolved by including the position, speed, and direction of the ball's movement in the state (or using other techniques such as frame-stacking, where multiple preceding frames are included in the observation). In real-world scenarios, fully capturing movement may require including higher-order dynamics like acceleration or jerk.
 
 \subsection{Partially observable MDPs}
-Regular MDPs can be somewhat limiting when modeling real-life scenarios, but many modifications exist that solve some of the issues. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the actual state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
+Regular MDPs can be somewhat limiting when modeling real-life scenarios, but many modifications exist that address some of the issues. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
 
 \section{Policy}
 Now that the environment is formally defined using an MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ (or an observation of it) and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$. Since the ending state of one experience and the initial state of the following experience is the same, it can be simplified to: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just gives zero reward and never transitions the environment into a new state. History is then some prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$. The agent makes the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
@@ -428,7 +427,7 @@ With regular supervised learning, the variable length of the output could be a c
 
 First, we have to decide on the state and action spaces and the representation of the states and actions. The input image can be used directly as the state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values of this tensor are integers in the range 0-255 or real numbers in the range 0-1 after normalization. The \texttt{Box} Gymnasium type is ideal for this representation. In theory, the \texttt{MultiDiscrete} could be more suitable as the values are discrete, not continuous, but SB3 does not currently support using convolutional layers on discrete spaces.
 
-The representation of actions is more complicated than that of the state. At first, I again chose the most straightforward mapping, where each action is one selection; starting from Section \ref{sec:iterative}, I switched to a different approach. Each action is a tuple of four real numbers from 0-1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center, and the other two represent the width and height. Other representations of a bounding box using four real numbers are possible, one of which is explored in Subsection \ref{subsec:different_rect_repr}. Such action space can also be defined using the \texttt{Box} Gymnasium type.
+The representation of actions is more complicated than that of the state. At first, I again chose the most straightforward mapping, where each action is one selection; starting from Section \ref{sec:iterative}, I switched to a different approach. Each action is a tuple of four real numbers from 0 to 1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center, and the other two represent the width and height. Other representations of a bounding box using four real numbers are possible, one of which is explored in Subsection \ref{subsec:different_rect_repr}. Such action space can also be defined using the \texttt{Box} Gymnasium type.
 
 \section{Choosing an algorithm}
 As discussed in Section \ref{sec:algos}, many different reinforcement learning algorithms exist. The Stable-Baselines3 library implements a total of seven\footnote{Seven more experimental algorithms are available in the contribution version of the library.}: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER}\footnote{In newer versions of SB3, \texttt{HER} is no longer a separate algorithm but just a type of a replay buffer.}, \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one as a starting point.
@@ -440,7 +439,7 @@ I decided on \texttt{PPO} mainly through a process of elimination. First of all,
 \section{Custom environments}
 It might be tempting to start training in an environment that simulates the final problem. When I initially attempted this approach, the results were unsatisfactory. The complexity of the setup made experimentation difficult: if a change in parameters led to equally poor results, it was unclear whether the adjustment was ineffective or if the current implementation was so far from ideal that even a beneficial change would not have a noticeable effect. So, instead, I started with a very simplified version of the final problem. Once I reached satisfactory results, I could move on to a more complex task and repeat this process until returning to the final environment with enough knowledge to complete it.
 
-This gradual increase in difficulty also allows for transfer learning. I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that is randomly initialized.
+This gradual increase in difficulty also allows for transfer learning (reusing learned knowledge on a similar task). I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that is randomly initialized.
 
 The following sections discuss the intermediate environments in greater detail and provide information on all the steps and experiments I took to solve them.
 
@@ -561,6 +560,7 @@ The resulting model took around 6 hours to train and reached a mean reward of ar
 \end{figure}
 
 \section{Different shapes}
+\label{sec:different_shaps}
 %v4 env%
 Now that the model could locate multiple rectangles in a single image with quite a reasonable accuracy, the next step was introducing other shapes. This new environment was identical to the previous one, but there could also be ellipses and triangles instead of just rectangles. Since the rules were still the same, there were an average of 3.5 objects, and their bounding boxes did not collide. Figure \ref{fig:env4} shows some examples of this environment.
 
@@ -613,14 +613,13 @@ One considerable simplification we are currently undertaking is that each positi
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{env_examples/env5.pdf}
-    \caption{Four examples of the new environment}
+    \caption{Four examples of the environment with multiple shapes of objects}
     \label{fig:env5}
 \end{figure}
  
 This change had little to no effect on the training progression.
 
 \section{Bigger images}
-Poznámka: Možná tuto sekci vynechám, jakože jsou tam I zajímavý věci, ale ve výsledku jsem to pak už moc nepoužil.
 %env 6%
 At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since we only need to locate the objects, which should not require pixel-sized details, some downscaling is possible, but squashing the image down to $100\times100$ pixels would likely be too much. Because of this, I wanted to experiment with larger image states.
 
@@ -784,9 +783,9 @@ After fixing these issues, the agent reached an average reward of 55 per episode
 \subsection{Tolerant Intersection over Union}
 \label{subsec:eval_metric}
 
-Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is the standard for bounding box prediction evaluation compared to the ground truth. It works well in classic object detection tasks where most objects are of a similar size. However, that is not the case in this problem. Some objects can take up most of the image, while others can take up less than 0.01 percent of the screen area (for example, the back button in Overleaf).
+Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is the standard for bounding box prediction evaluation compared to the ground truth. It works well in classic object detection tasks where most objects are of a similar size. However, that is not the case in this problem. Some objects can take up most of the image, while others can take up less than 0.01 percent of the screen area.
 
-IoU calculates relative errors. This behavior does not reflect our end goal. We care more about absolute differences than relative ones. An error of 2 pixels on a small element is usually not a problem, even though it is a lot relative to its size. An error of 50 pixels is a problem even for a large element, even though it is not much relative to its size. For this reason, I wanted to experiment with other metrics that could better reflect my requirements.
+IoU calculates relative errors. This behavior does not reflect my end goal. I care more about absolute differences than relative ones. An error of 2 pixels on a small element is usually not a problem, even though it is a lot relative to its size. An error of 50 pixels is a problem even for a large element, even though it is not much relative to its size. For this reason, I wanted to experiment with other metrics that could better reflect my requirements.
 
 Since the agent currently only receives the zoomed-in view of the image, using a metric that is not purely relative would break the Markov property. The model cannot know if it is zoomed in a lot on a small object or zoomed in a little on a large object. To fix this problem, I expanded the observation space also to include the coordinates of the current view window. This meant changing the observation space to the \texttt{Dict} Gymnasium type and creating a new feature extractor. The entire architecture of this new network is shown in Figure \ref{fig:multiinput_arch} in the Appendix.
 
@@ -800,16 +799,16 @@ This new metric solved the issue of small bounding boxes being very sensitive, r
 
 Since the Tolerant IoU metric still performed poorly on large bounding boxes, I wanted to construct a metric that would rely solely on the absolute differences between the bounding boxes and not consider their size.
 
-The Absolute Sigmoid Score metric computes the differences between the minimum $x$ and $y$ coordinates of the two boxes, the maximum $x$ and $y$ coordinates, and the $x$ and $y$ coordinates of their centers. The sum of these differences (marked as $\text{Diff}( b_1, b_2)$ in the formula below) is then passed through a descending sigmoid function. The sigmoid binds the result to the $[0,1]$ interval and captures the intuition that minor differences should be penalized less. The sigmoid function has two parameters, $\alpha$, which controls the steepness of the sigmoid, and $\theta$, which shifts the sigmoid (I used values $\alpha = 2.8$ and $\theta = 0.5$). To ensure that a perfect match always yields a score of one (regardless of $\alpha$ and $\theta$), the result is divided by the value of the sigmoid at zero.
+The Absolute Sigmoid Score metric computes the differences between the minimum $x$ and $y$ coordinates of the two boxes, the maximum $x$ and $y$ coordinates, and the $x$ and $y$ coordinates of their centers. The sum of these differences (marked as $\text{Diff}( b_1, b_2)$ in the formula below) is then passed through a descending sigmoid function. The sigmoid binds the result to the $[0,1]$ interval and captures the intuition that minor differences should be penalized less. The sigmoid function has two parameters, $\alpha$, which controls the steepness of the sigmoid, and $\theta$, which shifts the sigmoid (I used values $\alpha = 2.8$ and $\theta = 0.5$). To ensure that a perfect match always yields a score of one (regardless of $\alpha$ and $\theta$), the result is divided by the value of the sigmoid at a difference of zero.
 
 \begin{equation}
 \begin{split}
     \sigma(x) & = \frac{1}{1+e^{-x}} \\
-    \text{AbsSigScore}( b_1, b_2) & = \frac{1-\sigma(\alpha\cdot(\text{Diff}( b_1, b_2)-\theta))}{1-\sigma(\alpha\cdot\theta)}
+    \text{AbsSigScore}( b_1, b_2) & = \frac{1-\sigma(\alpha\cdot(\text{Diff}( b_1, b_2)-\theta))}{1-\sigma(-\alpha\cdot\theta)}
 \end{split}
 \end{equation}
 
-I struggled to find a suitable threshold of where to consider the score good enough to increase the difficulty of the curriculum learning. 0.85 was way too low, and the model's predictions were bad; 0.9 was too high, and the model did not progress in the curriculum learning. It is possible that with different parameters of $\alpha$ and $\theta$, this metric could be suitable. Nevertheless, for the rest of the experiments, I returned to TIoU.
+I struggled to find a suitable threshold of where to consider the score good enough to increase the difficulty of the curriculum learning. 0.85 was way too low, and the model's predictions were bad; 0.9 was too high, and the model did not progress. It is possible that with different parameters of $\alpha$ and $\theta$, this metric could be suitable. Nevertheless, for the rest of the experiments, I returned to TIoU.
 
 \subsection{Selection padding}
 
@@ -820,60 +819,94 @@ While the final result after 20 million training time steps was almost identical
 \section{Finding objects in a real image}
 %v9 env%
 
-The previous environment has shown that it is possible to train a model that can find objects even in relatively complex hierarchies. However, it was still locating only rectangles in a heavily preprocessed image. This preprocessing required finding all the objects first. The next step was creating an environment with only a simple image preprocessing. To be more exact, it takes an image of a website, locates edges, and inflates them using morphological dilation. Figure \ref{fig:env9} shows some examples of the state the model receives.
+The previous environment has shown that it is possible to train a model that can find objects even in relatively complex hierarchies. However, it was still locating only rectangles in a heavily preprocessed image. This preprocessing required finding all the objects first using a different method, making the actual model somewhat pointless. The next step was creating an environment with only a simple image preprocessing that does not require knowing the locations of all the objects. It takes an image of a website, locates edges, and inflates them using morphological dilation. Figure \ref{fig:env9} shows some examples of the state the model receives.
 
-Besides changing the observation, this environment was similar to the previous one. The reward was still calculated based on ground truth labels, but this time, I used a more advanced CV-based detector described in the following chapter to make the reward function more accurate. This raised the average count of objects per image to 32.4, meaning that the maximum average reward per episode was 129.6, and the goal was to reach 90 per episode (TIoU of 0.7).
+Besides changing the observation, this environment was similar to the previous one. The reward was still calculated based on ground truth labels, but this time, I used a more advanced CV-based detector (described in Section \ref{sec:trad_cv_detector}) to make the reward function more accurate. This raised the average count of objects per image to 32.4, meaning that the maximum average reward per episode was 129.6, and the goal was to reach 90 per episode (TIoU of 0.7).
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{env_examples/env9.pdf}
-    \caption{Four examples of the environment where rectangles are based on real websites.}
+    \caption{Four examples of the environment where the state is a slightly preprocessed image.}
     \label{fig:env9}
 \end{figure}
 
-When running a training in this environment, using the same set-up that solved the previous environment, the resulting agent reached a top score of just under 50.
+When running a training in this environment, using the same set-up that solved the previous environment, the resulting agent reached a top score of around 46.
+
+The first change I made was to how the scaling of the image was done. In the previous environments, the image was always binary. This was because the objects were marked by only a one-pixel outline, which would often nearly disappear when a significant downscaling was applied. Here, this was no longer the case. By allowing the use of all 256 possible pixel values, the model could get some extra information and allow it to see finer detail. This change brought the average episode reward from 46 to 53.
+
+\subsection{Changing the feature extractor}
+
+Back in Section \ref{sec:different_shaps}, we saw that changing the shapes of the located objects required a larger feature extractor. As a reminder, since changing the action space to being discrete, all the environments were solved using a network with a very simple, not pretrained feature extractor with only three convolutional layers. Since the score dropped significantly when more complex objects were introduced, a bigger extractor could help.
+
+When using the bigger network developed in Subsection \ref{subsec:arch_change} (modified to also take the selection's coordinates), the score increased from 53 to 62. Surprisingly, when trying the ResNet-based architecture (Subsection \ref{subsec:resnet}) the model quickly dropped to a score of zero and never recovered. TODO: try this training again because it is sus.
+
+
 
 \chapter{Comparison with other methods}
 
 In the previous chapter, I described the development of a GUI element detector trained using deep reinforcement learning. While this demonstrated that the RL-based approach is feasible, it did not assess whether it offers advantages over traditional methods. In this chapter, I present two prototype detectors based on conventional techniques and compare all three solutions across multiple criteria.
 
-\section{Tradition CV-based detector}
+\section{Traditional CV-based detector}
 \label{sec:trad_cv_detector}
 
-To create a detector based purely on traditional computer vision algorithms with no ML, I mainly combined techniques described in Section \ref{sec:traditionalCV} to improve my detector described in Subsection \ref{subsec:dataset} to increase its accuracy. It uses Canny edge detection followed by Suzuki-Abe contour tracking to find potential objects. These are then filtered based on multiple criteria to hopefully only end with actual objects. The entire algorithm is described in detail in the Appendix in Chapter \ref{ap:cv}. The implementation was created using the OpenCV library\footnote{\url{https://opencv.org/}}.
+To create a detector based purely on traditional computer vision algorithms with no ML, I mainly combined techniques described in Section \ref{sec:traditionalCV} to improve my detector described in Subsection \ref{subsec:dataset}. It uses Canny edge detection followed by Suzuki-Abe contour tracking to find potential objects. These are then filtered based on multiple criteria to hopefully only end with actual objects. The entire algorithm is described in detail in the Appendix in Chapter \ref{ap:cv}. The implementation uses the OpenCV library\footnote{\url{https://opencv.org/}} for the image processing.
 
-The two most problematic element types I encountered in the implementation were text and raster images. Unlike other elements, text is not a single large area of pixels but instead many small elements for each letter. It can be challenging to distinguish between a letter contour and one of random noise. To minimize this issue, I used morphological dilation and merged close letters. While this helps, it also creates inconsistencies where large letters are an element each, while smaller ones are merged.
+The two most problematic element types I encountered in the implementation were text and raster images. Unlike other elements, text is not a single large area of pixels but instead many small elements for each letter. It can be challenging to distinguish between a letter contour and one of random noise. To minimize this issue, I used morphological dilation and merged close letters. While this helps, it also creates inconsistencies where large letters are an element each, while smaller ones are merged into a single element.
 
 Raster images are problematic because they contain many edges of irregular sizes, which are unimportant for the element detection. This is especially hard to eliminate when the website uses an image as a background and its edges interfere with the edges of actual elements.
 
-\section{YOLOv8}
+\section{Supervised DL-based detector}
 
-The second common approach for object detection, especially for more complex images, is using deep convolutional neural networks capable of predicting a variable number of bounding boxes.
+The second common approach for object detection, especially for more complex images, is using deep convolutional neural networks capable of predicting a variable number of bounding boxes trained using supervised learning.
 
-I chose YOLOv8 \cite{yolov8_ultralytics} because I have previously worked with it, it is straightforward to use, and has been shown to have good results with GUI element detection \cite{GUI_YOLO_comparison}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com/}} in 2023 and is provided under the AGPL-3.0 license. Interestingly, it is not only an object detection model but also has versions for segmentation, classification, pose detection, and oriented bounding box object detection. The detection model comes in 5 sizes, ranging from 3 to 68 million parameters \cite{ultralytics-docs} (I used the smallest variant as the prototype).
+I chose not to implement such a model from scratch, since that alone would likely be enough for a thesis. Instead, I have opted for YOLOv8 \cite{yolov8_ultralytics}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com/}} in 2023. YOLOv8 is a collection of pre-trained models for various tasks and of multiple sizes (ranging from 2.7 to 99.1 million parameters) \cite{ultralytics-docs}. Specifically, I used the smallest object detection model \texttt{YOLOv8n}. Newer versions have been released since, but I do have some past experience with YOLOv8, and it has been confirmed to work with GUI elements \cite{GUI_YOLO_comparison}. 
 
-The model is pretrained on the COCO\footnote{\url{https://cocodataset.org/}} (Common Objects in Context) dataset and must be fine-tuned for the specific purpose. As mentioned previously, datasets for my task are limited, so for the experimentation, I decided to create my dataset. To do so, I used my CV-based detector (see Section \ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset \cite{aydos2020}, also used in previous chapters. Please note that this makes any accuracy comparisons between these two detectors completely invalid, since the YOLOv8 model is essentially learning to copy my current detector and can not thus produce better results. However, since all three compared detectors are prototypes, this should not matter. We can assume that if the model learns well with this mocked dataset, it would also learn well with a real one.
+The model is pretrained on the COCO dataset \cite{COCO} and must be fine-tuned for the specific purpose. As mentioned previously, datasets for my task are limited, so for this prototype, I decided to create my own dataset. To do so, I used my CV-based detector (see Section \ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset \cite{aydos2020}. Please note that this makes any accuracy comparisons between these two detectors completely invalid, since the YOLOv8 model is essentially learning to copy my current detector and can not thus produce better results. However, since all three compared detectors are prototypes, this should not matter. We can assume that if the model learns well with this mocked dataset, it would also learn similarly well with a real one.
 
-Fine-tuning the model is extremely simple. Using the Python Ultralytics API, an instance of the \texttt{YOLO} class is created with the path to a pretrained model. Next, the \texttt{train} method is called with the path to the dataset. Specifying the epoch count, early stopping criteria, initial learning rate, and some other hyperparameters is possible. However, the library calculates suitable values if not provided. Ultralytics also provides a command-line interface for doing the same.
+Fine-tuning the model is extremely simple. Using the Python Ultralytics API, an instance of the \texttt{YOLO} class is created with the path to a pretrained model. Next, the \texttt{train} method is called with the path to the dataset. Specifying the epoch count, early stopping criteria, initial learning rate, and some other hyperparameters is possible. However, the library calculates suitable values if not provided. Ultralytics also provides a command-line interface.
 
 \section{Challenges of comparing the detectors}
-As described in the official assignment, one of this thesis's goals was to say which of the three approaches is the most suitable for creating a detector model for AIVA. Since, at this point, I have three different detectors, each based on one of the approaches, it might seem sensible to directly compare them. However, I believe such a comparison would be neither fair nor meaningful due to significant differences in their development conditions.
 
-Each detector has a different level of maturity and was developed with varying degrees of familiarity with the underlying technology. Specifically:
-\begin{itemize}
-    \item I created the RL-based detector as a proof-of-concept. Before this thesis, I had zero experience with RL.
-    \item I created the CV-based detector as a prototype in less than 20 hours. I had experience with such an algorithm, but my knowledge is still very limited.
-    \item The DL-based detector is only a fine-tune of an existing state-of-the-art model developed by professionals in the field. The fine-tuning was done on data generated by one of the other detectors.
-\end{itemize}
+Before comparing the three detectors, it is important to note that each is at a very different level of maturity. The RL and CV-based detectors were created by me with varying amounts of knowledge of each topic and varying amounts of time. The DL-based detector was created by professionals and only fine-tuned by me.
 
-Of course, we can still judge properties of the individual detectors and try to spot some common issues. However, they should not be compared directly since they are at a very different level of maturity and completeness. Please keep this in mind in the following sections.
+These prototypes should be sufficient to compare the used concepts and draw attention to their main benefits and problems. However, if one were to look for a specific detector to use in an application such as AIVA, more detailed comparisons should be done with specific existing detectors.
 
 \section{Accuracy}
 
-There are no ground truth labels to calculate the accuracy. In some cases, there might even be multiple correct answers (for example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. None of these is more correct than the other).
+In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this can be somewhat problematic as multiple correct answers might exist. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this reason and the reasons described in the previous section, I won't be including any numerical data in this section.
+
+TODO: See some predictions and try to spot common mistakes for each detector.
+
 \section{Speed}
+
+For real-time applications, the speed of a detector is crucial. During a single test, AIVA might localize the elements more than a hundred times, meaning it has a high effect on how long a test execution takes.
+
+The prediction times on the YOLO-based detector were by far the fastest. The median prediction time was 12 ms on the GPU and 30 ms on the CPU. The time did depend on the number of objects detected, though the differences were small (11 ms for 20 objects, 15 ms for 80 objects). The very first prediction is a lot slower, taking around 1.5 s.
+
+The CV-based detector was slower, with a median prediction time of 144 ms. Here, the object count played a bigger role (125 ms for 20 objects, 200 ms for 80 objects). On the other hand, the detector does not require any initialization, making the time to first prediction faster than that of the YOLO-based detector. If speed were the primary goal, it could definitely be optimized further. For example, the bilateral filter takes up over 46 percent of the runtime. Another 17 percent is used on thousands of operations with bounding boxes, many of which could likely be removed or calculated in a faster way.
+
+The RL-based detector is slow. While each step of the model only takes a bit over 1 ms on the GPU (around 2 ms on the CPU), this approach also requires simulating the environment (around 0.5 ms per step) and, most crucially, every bounding box prediction requires anywhere from 20 to 40 steps. That means over 100 ms per bounding box and multiple seconds for the whole image.
+
+I believe there are ways to bring this time down. Modifying the shrink amounts or adding even more actions for different levels of shrinking could significantly reduce the step count. With the continuous actions attempted at the beginning, only a single step per object would be required. A combination of discrete and continuous actions, where the model would pick a direction and amount of shrinkage, could also work. Unfortunately, the SB3 library currently does not support mixed action spaces.
+
 \section{Data requirements}
+
+Try training the RL-based detector and YOLO detector on datasets to sizes 100, 1,000, and 10,000 (current) and see the difference.
+
+
 \section{Implementation difficulty}
+
+The final criterion I want to assess is the difficulty of implementing a detector using each approach. While this is very subjective, I believe it to be one of the most important for actual usage.
+
+Reinforcement learning is not usually used for element detection. Because of this, I had to implement most of the parts (environments, reward functions, networks) myself. There is also very little information available on reinforcement learning with image input. While some famous image-based environments exist (namely, Atari games and the OpenAI robot fetch), most RL environments, tutorials, and projects use much lower-dimensional observations. This meant a lot of experimenting, often with mixed results.
+
+However, supervised learning-based object detection is a very well-explored subject. Many datasets and ready-to-use models exist, along with tutorials on how to use them, and new papers and versions of these models are released regularly. Once I created the dataset, it took me under 3 hours, including training, to get the first decent YOLOv8 prototype. Of course, if one were to implement their model from scratch, it would take much longer, but I still believe it would be more straightforward than when using RL.
+
+With CV-based detectors, it is more complicated. From my experience, I can confirm that a person with basic image processing knowledge can create a CV-based detector that works well on simple GUIs within hours. But then again, making it work on more complex GUIs can take hours of tedious finding of ideal thresholds and parameters, only to find another case where the current setup fails. The most significant advantage here is that the whole algorithm is very transparent and debuggable, which makes fixing problems much more straightforward than with black-box machine learning.
+
+I believe that the most time-efficient way to implement an element detector would be to use existing ML-based models for detecting difficult-to-process elements (namely, an OCR for texts and a YOLO like model for images), then removing these parts from the image and using a CV-based detector for the rest.
+
+\chapter*{Conclusion}
 
 
 \printbibliography[heading=bibintoc] %% Print the bibliography.
