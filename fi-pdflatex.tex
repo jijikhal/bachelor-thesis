@@ -189,7 +189,7 @@ Reinforcement learning is challenging due to the sequential, evaluative, and sam
 
 The sequentiality comes from the fact that most tasks span multiple time steps. The consequences of an action might not be immediately apparent. When an episode ends with a very negative result, it can be difficult to determine which of the preceding actions is the cause, as it is often not the last action taken.
 
-Evaluative feedback refers to the reward being provided as a scalar value. Without additional context, it is impossible to know if the received reward was the best possible and if we should thus repeat the decision in similar states or whether it was terrible and should be avoided in the future. This issue leads to the need for exploration discussed in Section~\ref{sec:eplor-exploit}.
+Evaluative feedback refers to the reward being provided as a scalar value. Without additional context, it is impossible to know if the received reward was the best possible and if we should thus repeat the decision in similar states or whether it was terrible and should be avoided in the future. This issue leads to the need for exploration discussed in Section~\ref{sec:explor-exploit}.
 
 The agent can only learn from the states it has visited and the actions it has taken, thus the feedback it gets is sampled. In many real-life RL problems, there are so many states that trying every combination of state and action is impossible. This challenge also exists in supervised learning, as the dataset will never contain all the data we might encounter. However, in reinforcement learning, this is even worse as the agent must collect all the data on its own.
 
@@ -198,13 +198,13 @@ In order to define RL and its objective, it is first necessary to define the env
 
 $S$ is the state space, a set of all possible environment states. It can contain both discrete and continuous values. At each time step $t$, the MDP is in a state $s_t\in S$.
 
-$A$ is the action space, a set of all possible actions an agent can perform in this MDP. It may also be discrete, continuous, or a combination of both. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
+$A$ is the action space, a set of all possible actions an agent can perform within the MDP. It may also be discrete, continuous, or a combination of both. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
 
-$p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$. For a given state $s\in S$ and a given action $a\in A$, it returns a probability distribution over the states $s'\in S$. It tells us the probability of the MDP transitioning from the state $s$ to a state $s'$ given that an action $a$ was selected. Formally, it is defined as:
+$p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$. For a given state $s\in S$ and a given action $a\in A$, it returns a probability distribution $\mathcal{D}(S)$ over the states $s'\in S$. It specifies the probability of the MDP transitioning from the state $s$ to a state $s'$ given that an action $a$ was selected. Formally, it is defined as:
 \begin{equation}
 p(s' \mid s,a)=P(S_t=s'\mid S_{t-1}=s,A_{t-1}=a)    
 \end{equation}
-The sum of all transition probabilities for each individual state-action pair must equal one:
+The sum of all transition probabilities for each state-action pair must equal one:
 \begin{equation}
 \sum_{s'\in S} p(s'\mid s,a)=1, \forall s \in S, \forall a \in A
 \end{equation}
@@ -214,7 +214,7 @@ If the environment does not allow for some action $a^{\times}$ to be performed i
     p(s'\mid s, a^{\times}) =\begin{cases}1 & s' = s\\0 & \text{otherwise} \end{cases} 
 \end{equation}
 
-Lastly, $r$ is the reward function. Depending on the use case, it can be defined either as $r\colon S \times A \to \mathbb{R}$ \cite{PA230} -- the expected reward for choosing an action $a$ in a state $s$:
+Lastly, $r$ is the reward function. Depending on the use case, it can be defined either as $r\colon S \times A \to \mathbb{R}$ -- the expected reward for choosing an action $a$ in a state $s$ \cite{PA230}:
 \begin{equation}
 r(s,a)= \mathbb{E} [R_t\mid S_{t-1}=s, A_{t-1}=a]
 \end{equation}
@@ -223,56 +223,57 @@ or as $r\colon S\times A \times S \to \mathbb{R}$ -- the expected reward for cho
 r(s, a, s')= \mathbb{E} [R_t\mid S_{t-1}=s, A_{t-1}=a, S_t=s']
 \end{equation}
 
-Another property often defined is the set of initial states $S^i \subseteq S$. When an MDP is initialized, the initial state is chosen from this subset using a probability distribution $\mathcal{I}$ over these states.
+The initial state distribution is typically defined over a subset of states $S^i \subseteq S$. When an MDP is initialized, the initial state is chosen from this subset using a probability distribution $\mathcal{I}$ over these states.
 
-Similarly, a set of all terminal states may be defined. The MDP terminates when it transitions into one of the terminal states. Alternatively, the explicit definition of terminal states can be omitted by modeling them as absorbing states. This involves defining the transition function such that any action taken in a terminal state leads back to that same state with a probability of 1, and ensuring the reward for such transitions is 0.
+Similarly, a set of all terminal states may be defined. The MDP terminates when it transitions into one of the terminal states. Alternatively, terminal states can be modeled as absorbing states, eliminating the need for explicit definition. This involves defining the transition function such that any action taken in a terminal state leads back to that same state with a probability of 1, and ensuring the reward for such transitions is 0.
 
 Simple Markov decision processes can be visualized as diagrams, as illustrated in Figure \ref{fig:mdp}.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{diagrams/mdp.pdf}
-    \caption{An example of a graphical representation of a Markov decision process. Squares depict terminal states. Transition probabilities (purple) and rewards (green) are indicated.}
+    \caption{Graphical representation of a Markov decision process. Squares depict terminal states. Transition probabilities (purple) and rewards (green) are indicated.}
     \label{fig:mdp}
 \end{figure}
 
 \subsection{Markov property}
 \label{subsec:markov_property}
-The probabilistic transition function $p$ only takes the current state and action as inputs. Importantly, it does not consider history. The probability of transitioning from a state $s$ to a state $s'$ under an action $a$ depends only on $s$ and $a$, not on how the MDP arrived at $s$. This memorylessness of MDPs is known as the Markov property. It is important to remember when implementing an environment since many RL algorithms rely on the environment to satisfy the Markov property. It can be formally defined as
+The probabilistic transition function $p$ only takes the current state and action as inputs. Notably, it does not take into account the history of past states or actions. The probability of transitioning to state $s'$ after taking action $a$ in state $s$ is independent of the sequence of prior states and actions that led to $s$. This memorylessness of MDPs is known as the Markov property. This property is critical during environment implementation, as many RL algorithms assume the environment satisfies the Markov property. It can be formally defined as
 \begin{equation}
 P(S_{t+1}\mid S_t,A_t)=P(S_{t+1}\mid S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
 \end{equation}
-An example of an environment that violates this property could be the game of Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. From just one frame, it is impossible to know in which direction or at what speed the ball will move after the next action. This problem can, of course, be resolved by including the position, speed, and direction of the ball's movement in the state (or using other techniques such as frame-stacking, where multiple preceding frames are included in the observation). In real-world scenarios, fully capturing movement may require including higher-order dynamics like acceleration or jerk.
+An example of an environment that violates the Markov property is the game Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. A single frame does not provide sufficient information to determine the ball’s direction or speed after the next action. This issue can be addressed by explicitly including the ball’s position, speed, and direction in the state representation (or using other techniques such as frame-stacking, where multiple preceding frames are included in the observation).
 
 \subsection{Partially observable MDPs}
-Regular MDPs can be somewhat limiting when modeling real-life scenarios, but many modifications exist that address some of the issues. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
+Standard MDPs may be insufficient for accurately modeling real-world environments; however, various extensions have been proposed to address these limitations. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
 
 \section{Policy}
-Now that the environment is formally defined using an MDP, we can also formally define the agent. We can imagine the agent as some entity that receives a state $s$ (or an observation of it) and, based on it, chooses an action $a$ that is then performed, and the agent receives a reward $r$ and a new state $s'$. As mentioned, we call the tuple $(s, a, r, s')$ an experience. The entire chain of these experiences is called a trajectory $\tau$. Since the ending state of one experience and the initial state of the following experience is the same, it can be simplified to: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that a trajectory is infinitely long since even in a terminal state, we can still perform an action; it just gives zero reward and never transitions the environment into a new state. History is then some prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$. The agent makes the decisions based on some rules. We call policy $\pi$ a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
+With the environment formally defined as an MDP, we can also define the agent. The agent can be viewed as an entity that, upon receiving a state $s$ (or an observation of it), selects an action $a$, which results in a reward $r$ and a transition to a new state $s'$. As mentioned, the tuple $(s, a, r, s')$ is referred to as an experience. The entire sequence of these experiences is called a trajectory $\tau$. Since the final state of one experience is the initial state of the next, the trajectory can be simplified as follows: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that, depending on the type of task and definition of the terminal states, the trajectory can be infinitely long. A history is then some finite prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$.
+The agent's behavior is governed by a policy. A policy $\pi$ is a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
 
-If the Markov property is fulfilled, we can simplify policy to just $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can also be memoryless. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might be helpful to differentiate between them).
+If the environment satisfies the Markov property, we can simplify the policy definition to just $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can also be memoryless. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might be helpful to differentiate between them).
 
-We can further simplify the policy by making it deterministic -- instead of returning a probability distribution $\mathcal{D}(A)$ it returns just a single action $a$. Such policy can be defined as just $\pi\colon S \to A$.
+We can further simplify the policy by making it deterministic -- instead of returning a probability distribution $\mathcal{D}(A)$, it returns a single action $a$. Such a policy can be defined as just $\pi\colon S\to A$.
 
 \section{The goal of RL}
 \label{sec:goal}
-Now that we have fully formally defined the environment (MDP) and the agent (policy), we can define the goal of RL. The goal is to find a policy $\pi^*$ that maximizes the expected discounted cumulative reward, also called the discounted return. The cumulative reward (or return) of a trajectory $\tau$ is defined as the sum of all received rewards:
+With the environment (MDP) and the agent (policy) formally defined, we can now define the objective of reinforcement learning. The objective is to find a policy $\pi^*$ that maximizes the expected discounted cumulative reward, commonly referred to as the discounted return. The cumulative reward (or return) of a trajectory $\tau$ is the sum of all received rewards:
 \begin{equation}
-G(\tau) = r_1+r_2+r_3+\dotsb = \sum_{i=0}^{\infty} r_{i+1}
+G(\tau) = r_1+r_2+r_3+\dotsb = \sum_{i=1}^{\infty} r_i
 \end{equation}
-To get the discounted return, we exponentially decay the rewards by some discount factor $\gamma \in [0,1]$. The discounting has two reasons. Since the trajectory can be infinitely long, if the policy found a cycle with a positive reward (even very small), it would lead to the cumulative reward being infinite. Second, it encourages policies that not only reach the maximum reward but also get it as fast as possible because the reward will be less discounted. So, the discounted return $G$ on a trajectory $\tau$ with discount factor $\gamma$ is defined as:
+The discounted return is obtained by applying an exponential decay to future rewards using a discount factor $\gamma \in [0,1]$. Discounting serves two purposes. First, since trajectories can be infinite, a policy that enters a reward-generating cycle (even with small rewards) could result in an infinite return. Second, it encourages policies to achieve rewards sooner, as earlier rewards are less heavily discounted. The discounted return $G$ on a trajectory $\tau$ with discount factor $\gamma$ is defined as:
 \begin{equation}
-G(\tau)=r_1+\gamma \cdot r_2+ \gamma^2 \cdot r_3+\dotsb = \sum_{i=0}^{\infty} \gamma^i\cdot r_{i+1}
+G(\tau)=r_1+\gamma \cdot r_2+ \gamma^2 \cdot r_3+\dotsb = \sum_{i=1}^{\infty} \gamma^{i-1}\cdot r_{i}
 \end{equation}
-Finally, the expected discounted cumulative reward. As stated before, the environments are often stochastic. They can start in many different states (with possibly different probabilities), and taking an action in a state can lead to different transitions (again with possibly different probabilities). Because of this, even a deterministic policy can have different trajectories on the same MDP each time, and those can, in turn, have different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, not just in some specific single case.
+Finally, we consider the expected discounted return. Since environments are often stochastic, initial states may vary, and the identical state-action pair may lead to different transitions each time. As a result, even a deterministic policy can produce different trajectories in the same MDP, each yielding potentially different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, rather than optimizing for any particular instance.
 
 \section{Value functions}
 
-For a given policy $\pi$, we can calculate its value functions. These are functions that describe how this policy performs in some given environment. They can be used to compare policies or for learning purposes (see Subsection \ref{subsec:value-based-methods}).
+For a given policy $\pi$, we define value functions that measure its performance within a specific environment. These functions are useful for comparing policies and play a central role in many learning algorithms (see Subsection~\ref{subsec:value-based-methods}).
 
 \subsection{State-value function}
 \label{subsec:state_value_func}
-The state-value function $v_\pi\colon S\to \mathbb{R}$ (often called just the value function) tells us the expected return of policy $\pi$ when starting in a state $s$.
+The state-value function $v_\pi\colon S\to \mathbb{R}$ (often referred to as just the value function) gives the expected return of policy $\pi$ when starting in a state $s$.
 \begin{equation}
 v_\pi(s) = \mathbb{E}_\pi [G_t\mid S_t=s]
 \end{equation}
@@ -283,46 +284,40 @@ If we know the underlying MDP, we can calculate it directly using the Bellman eq
 v_\pi(s) = \sum_a \pi(a\mid s) \cdot \sum_{s',r} p(s',r\mid s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
 \end{equation}
 
-Due to the recursive nature of this formula, it would be difficult to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used (often called policy evaluation). When we cannot access the MDP, we can use algorithms such as Monte Carlo or Temporal difference that repeatedly interact with the environment to collect experiences and then use this data to approximate the value functions.
+Due to the recursive nature of this formula, it would be difficult to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used (often called policy evaluation). When the environment's dynamics are unknown, sample-based methods such as Monte Carlo and temporal-difference learning are employed to approximate value functions through interaction.
 
 \subsection{Action-value function}
 
-Knowing how well the policy performs in a state can be useful, but it does not help it decide which action to take (unless it also has access to the transition function). The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ tells us the expected return of policy $\pi$ if the agent were to select action $a$ in state $s$ and then follow the policy until it reaches a terminal state.
+While the state-value function indicates the quality of a state, it is of little help when choosing an action unless the agent also knows the transition function. The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ provides the expected return when taking an action $a$ in a state $s$ and following policy $\pi$ from there.
 
 \begin{equation}
 q_\pi(s,a) = \mathbb{E}_\pi [G_t\mid S_t=s,A_t=a]
 \end{equation}
 
-Knowing the action-value function can help us improve the policy. Algorithms, such as Q-learning and DQN, are based on this principle.
+Action-value functions are particularly useful for improving policies and form the foundation of algorithms such as Q-learning and Deep Q-Networks (DQN).
 
 \subsection{Action-advantage function}
 
-Lastly, the advantage function $a_\pi$ is a modification of the action-value function that tells us how much better (or worse) it is to take an action $a$ in a state $s$ compared to following the policy:
+Lastly, the advantage function $a_\pi$ quantifies how much better or worse taking a specific action $a$ in state $s$ is, compared to the expected performance of following policy $\pi$:
 
 \begin{equation}
 a_\pi(s,a) = q_\pi(s,a)-v_\pi(s)
 \end{equation}
 
-When using a neural network as the approximator, it is common to approximate state-value and advantage-value functions separately and combine the results instead of directly approximating the action-value function (this technique is known as the dueling network architecture and was introduced in \cite{dueling_arch}).
+In practice, especially when using neural networks as function approximators, it is common to estimate the state-value and advantage functions separately and then combine them to produce the action-value function. This approach is known as the dueling network architecture and was introduced in~\cite{dueling_arch}.
 
 \section{Exploration-exploitation tradeoff}
-\label{sec:eplor-exploit}
-As mentioned in Subsection \ref{subsec:state_value_func}, many RL algorithms rely on approximating a value function using an iterative algorithm and then use this information to improve the policy. They must repeatedly interact with the environment and collect experiences to make the approximation. To create the best approximation, it would be best to run the policy from every possible state and try every possible action, ideally many times, to account for randomness. Obviously, this is not feasible for any environments with more than a few thousand states, and it is impossible for environments with continuous state or action spaces.
+\label{sec:explor-exploit}
+As mentioned in Subsection \ref{subsec:state_value_func}, many RL algorithms rely on approximating a value function using an iterative algorithm and then use this information to improve the policy. The agent must interact with the environment repeatedly to collect experiences and improve the approximation. To create the best approximation, it would be best to run the policy from every possible state and evaluate every possible action, ideally many times, to account for randomness. This is clearly infeasible for environments with more than a few thousand states, and it is impossible for environments with continuous state or action spaces.
 
-Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation tradeoff. Should we rather try new actions and risk wasting time on unproductive paths (explore), or stick to what we know works reasonably well, but risk completely missing some better strategies (exploit)? To measure how much of the training was \enquote{wasted} on exploring, we can use a metric called regret. To calculate regret $R$ at time $T$, we sum the differences between the expected reward for the optimal action and the actual reward for the selected action for every step.
+Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation tradeoff. Should we rather try new actions and risk spending time on unproductive paths (exploration), or stick to strategies that are already known to perform reasonably well (exploitation)?
 
-\begin{equation}
-R(T) = \sum_{t=1}^{T}(\mathbb{E}[r^*]-r_t)
-\end{equation}
-
-Note that the optimal strategy must be known to calculate the expected optimal reward ($\mathbb{E}[r^*]$). If it is not known, other strategies must be used.
-
-The goal is to find the optimal policy while maintaining the lowest total regret. To manage this tradeoff effectively, various exploration strategies have been developed. Below are three commonly used approaches:
+The goal is to find the optimal policy while minimizing the number of time steps needed to do so. To manage this tradeoff effectively, various exploration strategies have been developed. Below are three commonly used approaches:
 
 \begin{itemize}
-    \item (Decaying) epsilon-greedy exploration strategy -- given some constant $\varepsilon \in [0,1]$, choose a random action with the probability of $\varepsilon$; otherwise, choose the action currently estimated to be the best. More commonly, $\varepsilon$ is not a constant; instead, it gets lowered (decayed) as training progresses.
-    \item Upper confidence bound strategy -- when choosing which action to take next, a bonus is added to the estimates with lower confidences (those that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{t}}{N_t(a)+1}}$ where $c$ is some constant describing the importance of this bonus, $t$ is the episode number and $N_t(a)$ is how many times the action $a$ was already chosen (plus one to avoid division by zero).
-    \item Softmax exploration strategy -- the chance of selecting a certain action is proportional to its action value estimate. To get the probabilities, we pass the estimates through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. The softmax function is defined as $\sigma (v)_i = \frac{e^{v_i}}{\sum^{K}_{j=1}e^{v_j}}$ for the $i$-th value of a vector $v$ with $K$ elements. This strategy would not work very well at the beginning when the estimates have high variance, so we also divided the estimates by a decaying hyper-parameter $\tau$ called temperature, which makes it so the estimates are less important at the beginning of the training.
+    \item (Decaying) epsilon-greedy exploration strategy -- at each decision point, a random action is selected with probability $\varepsilon \in [0,1]$, otherwise, choose the action currently estimated to be the best. Typically, $\varepsilon$ decays over time to minimize exploration in the later stages of training.
+    \item Upper confidence bound strategy -- when choosing which action to take next, a bonus is added to the estimates with lower confidence (those that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{t}}{N_t(a)+1}}$ where $c$ is a constant describing the importance of this bonus, $t$ is the episode number and $N_t(a)$ is how many times the action $a$ was already chosen (plus one to avoid division by zero).
+    \item Softmax exploration strategy -- the probability of selecting an action is proportional to the exponentiated estimate of its action value. To get the probabilities, we pass the estimates through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. The softmax function is defined as $\sigma (v)_i = \frac{e^{v_i}}{\sum^{K}_{j=1}e^{v_j}}$ for the $i$-th value of a vector $v$ with $K$ elements. This strategy may not work well at the beginning when the estimates have high variance. To combat this issue, we divide the estimates by a decaying hyperparameter $\tau$ called temperature. This makes the differences in estimates less important at the beginning of the training.
 \end{itemize}
 
 
@@ -330,62 +325,62 @@ The goal is to find the optimal policy while maintaining the lowest total regret
 \section{Reinforcement learning algorithms}
 \label{sec:algos}
 
-Especially in recent years, many reinforcement learning algorithms have been published. The following subsections only describe the three main categories with a couple of examples, as detailed descriptions of individual algorithms are not required to understand the following chapters.
+Over the last decade, numerous reinforcement learning algorithms have been proposed. The following subsections present the three main categories of reinforcement learning algorithms, along with selected examples. Exact descriptions of the individual algorithms are not provided, since they are not necessary for understanding the subsequent chapters.
 
 \subsection{Value-based methods}
 \label{subsec:value-based-methods}
 
-The most straightforward approach to reinforcement learning is learning to approximate the action-value function (either directly or calculating it using the state-value and advantage-value functions) and then using a greedy policy that selects the best action based on these approximations.
+The most straightforward approach to reinforcement learning is learning to approximate the action-value function (either directly or by computing it using the state-value and advantage-value functions) and then using a greedy policy that selects the best action based on these approximations.
 
-For simple environments with small discrete state and action spaces, it is possible to have a table of every state-action combination (tabular algorithms). There are many different algorithms utilizing this principle. They differ in the way they calculate the approximations (Temporal difference (TD), Monte-Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. Some more advanced algorithms approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
+In simple environments with small, discrete state and action spaces, each state-action combination can be explicitly represented in a table (known as tabular algorithms). There are many different algorithms utilizing this principle. They differ in the way they calculate the approximations (temporal difference (TD), Monte Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. Some more advanced algorithms approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
 
-While tabular algorithms can work very well for simple environments, they are unusable for any more complex ones. Even for just a $100 \times 100$ pixel binary image state, a table of over $10^{3011}$ numbers would be necessary.
+While tabular algorithms perform well in simple environments, they become infeasible in more complex scenarios. Even for just a $100 \times 100$ pixel binary image state, a table of over $2^{10000} \approx 10^{3010}$ numbers would be necessary.
 
-Deep learning is utilized for these more complex environments. The approximator is a neural network whose loss function is calculated as the difference between the approximations and actual values gathered during exploration. These methods often use a replay buffer -- a data structure that collects experience tuples from previous runs. When learning, examples are picked randomly from this buffer, reducing the bias in data caused by the experiences from one episode not being independent. These methods include algorithms such as Neural Fitted Q-iteration (NFQ), Deep Q-Learning (DQN), and Double DQN (DDQN).
+In complex environments, deep learning techniques are employed to approximate value functions. The approximator is a neural network whose loss function is calculated as the difference between the approximations and actual values gathered during exploration. These methods often use a replay buffer -- a data structure that collects experience tuples from previous runs. During training, samples are drawn randomly from the buffer, which helps reduce bias caused by the experiences from one episode not being independent. These methods include algorithms such as Neural Fitted Q-iteration (NFQ), Deep Q-Learning (DQN), and Double DQN (DDQN).
 
 \subsection{Policy-based methods}
 
-While value-based methods create policies indirectly based on a value function, policy-based methods learn the policy directly by outputting a probability distribution over actions. The learning is usually done by maximizing the probability of taking actions with a bigger advantage estimation using gradient ascent.
+While value-based methods create policies indirectly based on a value function, policy-based methods learn the policy directly by outputting a probability distribution over actions. Learning typically involves maximizing the probability of selecting actions with higher estimated advantages using gradient ascent.
 
 Purely policy-based algorithms are rarely used nowadays, but they are an important part of the actor-critic architecture introduced in the following subsection. Policy-based algorithms include REINFORCE and Vanilla Policy Gradient (VPG).
 
 \subsection{Actor-critic methods}
 
-Actor-critic methods combine both value-based and policy-based methods into one. They are composed of two parts: the actor and the critic. The critic is a value function estimator of the actor, which represents the policy by choosing the actions. The critic learns just like the value-based methods by minimizing TD or MC errors. The actor then learns by maximizing the expected return based on the value estimations provided by the critic.
+Actor-critic methods combine both value-based and policy-based methods into one. These methods consist of two components: the actor and the critic. The critic estimates the value function, while the actor represents the policy and selects actions accordingly. The critic learns just like the value-based methods by minimizing TD or MC errors. The actor then learns by maximizing the expected return based on the value estimations provided by the critic.
 
-Actor-critic methods combine the strengths of both value-based and policy-based methods. They are more stable, sample efficient, and can deal with discrete and continuous action spaces. State-of-the-art actor-critic algorithms include Twin Delayed Deep Deterministic Policy Gradient (TD3), Soft Actor-Critic (SAC), and Proximal Policy Optimization (PPO).
+Actor-critic methods combine the strengths of both value-based and policy-based methods. They are more stable, more sample-efficient, and can deal with discrete and continuous action spaces. State-of-the-art actor-critic algorithms include Twin Delayed Deep Deterministic Policy Gradient (TD3), Soft Actor-Critic (SAC), and Proximal Policy Optimization (PPO).
 
 \chapter{RL in practice}
 
-The previous chapter briefly explained the theory and terminology behind RL. This chapter follows up with an introduction to RL libraries and their usage. It should give enough context to make the source code of the experiments done in this thesis understandable.
+The previous chapter provided a brief overview of the theory and terminology related to reinforcement learning. It provides the necessary context to understand the source code used in the experiments presented in this thesis.
 
-As with most machine learning tasks, Python is one of the most popular programming languages for RL, so I decided to use it in this thesis. AIVA is written mainly in .NET, but this should not be a problem since most machine learning libraries allow export into a standard format such as ONNX\footnote{\url{https://onnx.ai/}} so that agents trained in Python can also be run natively in other programming languages.
+As with most machine learning tasks, Python is one of the most popular programming languages for RL, so I decided to use it in this thesis. Although AIVA is primarily implemented in .NET, this does not pose a limitation, as most machine learning libraries support model export to standard formats such as ONNX\footnote{\url{https://onnx.ai/}}. This enables agents trained in Python to be deployed natively in other programming environments.
 
 \section{Gymnasium}
 \label{sec:gym}
-Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of RL environments. It is a maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Its primary purpose is to define a unified environment API. However, it also contains many wrappers that simplify processes such as normalization, clipping, training recording, or vectorization of parallel training. It also provides many predefined environments that can be used to test new RL algorithms. The information in this section comes from the official Gymnasium documentation~\cite{gym-docs}.
+Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of RL environments. It is actively a maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Its primary objective is to define a unified API for reinforcement learning environments. Additionally, it includes numerous wrappers that simplify tasks such as normalization, reward clipping, training monitoring, and parallel environment vectorization. The library also includes a wide range of predefined environments that can be used to evaluate new RL algorithms. The content of this section is based on the official Gymnasium documentation~\cite{gym-docs}.
 
-An environment is a Python class that inherits from the \texttt{Env} class. Inside the initialization method of this class, the observation and action space types must be defined. Gymnasium provides the following types of spaces:
+In Gymnasium, an environment is implemented as a Python class that inherits from the \texttt{Env} base class. Within the class's initialization method, the observation and action space types must be specified. Gymnasium supports the following space types:
 
 \begin{itemize}
-    \item \texttt{Box} -- represents a tensor ($n$-dimensional matrix of numbers) of a fixed shape. The numbers inside can be both bounded and unbounded. This type is useful for a representation of images or continuous actions.
+    \item \texttt{Box} -- represents a fixed-shape $n$-dimensional tensor of numerical values. These values may be either bounded or unbounded. This type is commonly used to represent image observations or continuous action spaces.
     \item \texttt{Discrete} -- represents a space of finitely many integers. It is useful for representing discrete action spaces.
-    \item \texttt{MultiBinary} -- tensor of boolean values.
-    \item \texttt{MultiDiscrete} -- tensor of discrete values. 
+    \item \texttt{MultiBinary} -- represents a tensor of binary (boolean) values.
+    \item \texttt{MultiDiscrete} -- represents a tensor of discrete values.
     \item \texttt{Text} -- a string composed of specified characters.
-    \item Composite spaces -- multiple fundamental spaces can be combined into a \texttt{Dictionary}, \texttt{Tuple}, \texttt{Sequence} of variable length, a \texttt{Graph} or a \texttt{Union}.
+    \item Composite spaces -- fundamental space types can be combined using constructs such as \texttt{Dictionary}, \texttt{Tuple}, \texttt{Sequence} (of variable length), \texttt{Graph}, or \texttt{Union}.
 \end{itemize}
 
 The environment class also requires the following methods to be implemented:
 
 \begin{itemize}
-    \item \texttt{reset} -- called to begin a new episode. It resets the environment to an initial state and returns the initial observation and a dictionary with auxiliary information for debugging or other purposes. It takes a seed value as an optional parameter.
-    \item \texttt{step} -- performs a single time step of the environment. Its only input is the action to be performed, which has to adhere to the type defined in the initialization method. It transitions the environment to a new state, returning the new observation, the reward awarded for taking the action, whether the reached state was terminal, whether the episode was truncated (e.g., due to reaching a time limit), and again, a dictionary with auxiliary information.
-    \item \texttt{render} -- a method for getting the current state of the environment in a human-friendly format. Each environment can define multiple render modes, one of which can be selected during initialization. Most common formats include an RGB frame, text, or a list of RGB frames. This method can be either called manually by a user or, more often, by a monitoring wrapper of the environment.
+    \item \texttt{reset} -- method called to begin a new episode. It resets the environment to an initial state and returns the initial observation and a dictionary with auxiliary information for debugging or other purposes. It takes a seed value as an optional parameter.
+    \item \texttt{step} -- performs a single time step of the environment. Its only input is the action to be performed, which has to adhere to the type defined in the initialization method. It transitions the environment to a new state, and returns the new observation, the reward obtained from the action, a flag indicating whether the state is terminal, a flag indicating whether the episode was truncated (e.g., due to a time limit), and again, a dictionary with auxiliary information.
+    \item \texttt{render} -- a method for getting the current state of the environment in a human-friendly format. Each environment can define multiple render modes, one of which can be selected during initialization. Common render formats include RGB frames, textual output, or sequences of RGB frames. This method can be either called manually by a user or, more often, by a monitoring wrapper of the environment.
     \item \texttt{close} -- a clean-up method. Should close render windows, end database connections, etc.
 \end{itemize}
 
-Once an environment is defined, it should be registered using the \texttt{gymnasium.envs.registration.register} function, which allows it to be later created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a RL algorithm.
+Once an environment is defined, it must be registered using the \texttt{gymnasium.envs.registration.register} function. Registered environments can be later created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a reinforcement learning algorithm.
 
 \section{Stable-Baselines3}
 Stable-Baselines3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} (SB3) is a Python library containing implementations of RL algorithms. It originated as a maintained fork of the OpenAI Baselines\footnote{\url{https://github.com/openai/baselines}} library but has since evolved to include numerous additional algorithms, an improved API, and comprehensive documentation. The algorithms are implemented using PyTorch, allowing simple modifications of the underlying neural networks and GPU-accelerated training. These algorithms interact with environments defined using the Gymnasium API described in Section~\ref{sec:gym}. The information in this section is from the official SB3 documentation~\cite{SB3-docs}.
@@ -581,20 +576,13 @@ This result showed me that it was possible to get good results. However, I wante
 
 It is common not to create your feature extractor from scratch but instead to use one from an already existing network trained on a similar problem \cite[p. 256]{DLforVisualSystems}.
 
-ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple architecture sizes, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor. The architecture of ResNet-18 can be seen in Figure \ref{fig:resnet}.
-
-\begin{figure}
-    \centering
-    \includegraphics[width=1\linewidth]{diagrams/resnet.png}
-    \caption{Architecture of ResNet18. The illustration was taken from \cite{resnet_illustration}. TODO možná si udělám vlastní obrázek, tenhle je hnusnej}
-    \label{fig:resnet}
-\end{figure}
+ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple architecture sizes, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor.
 
 ResNet-18 is a convolutional neural network with 18 layers and residual (skip) connections that help mitigate vanishing gradients. Each convolution is typically followed by batch normalization. While the original ResNet ends with an average pooling layer, the PyTorch implementation uses an adaptive average pooling layer, which ensures a fixed-size output regardless of the input dimensions.
 
-A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). To solve this issue, I added a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in Figure \ref{fig:resnet_arch}.
+A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). To solve this issue, I added a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in Figure \ref{fig:resnet_arch}. I also removed the last fully connected layer that is normally used for classification.
 
-It is also important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. This dataset differs from our use case, which could mean the knowledge will not transfer well.
+It is important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. This dataset differs from our use case, which could mean the knowledge will not transfer well.
 
 I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were very poor. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. This time, the training went much better, reaching a reward of around 2.8 in less than 2.5 million time steps. Lastly, I also wanted to test whether the pre-trained weights made any difference compared to randomly initialized weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
 
@@ -873,9 +861,36 @@ These prototypes should be sufficient to compare the used concepts and draw atte
 
 \section{Accuracy}
 
-In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this can be somewhat problematic as multiple correct answers might exist. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this reason and the reasons described in the previous section, I won't be including any numerical data in this section.
+In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this can be somewhat problematic as multiple correct answers might exist. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this reason and the reasons described in the previous section, I won't be including any numerical scores in this section.
 
-TODO: See some predictions and try to spot common mistakes for each detector.
+The traditional CV-based detector struggles mainly with text and images. The text grouping is often inconsistent, short words are filtered out, and text on a background of similar color is missed completely. An image as a whole is usually detected correctly, but if it contains objects with high contrast, they are often labeled as separate elements. Some of these problems are illustrated in Figure \ref{fig:cv-mistakes}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/cv_mistakes.pdf}
+    \caption{Examples of common mistakes made by the CV-based detector.}
+    \label{fig:cv-mistakes}
+\end{figure}
+
+On the other hand, the predictions match the outline of the element well; it is very rare that a prediction is too large or too small. Crucially, when a prediction is incorrect, it is possible to find out why it was or wasn't filtered out and modify the filter. The white-box nature is, in my opinion, the biggest advantage compared to the other detectors.
+
+Since the YOLO detector was trained on outputs from the CV-based detector, I was expecting it to perform worse and learn to also replicate its problems. Surprisingly, this was not the case. I believe this is because the wrong predictions of the CV detector are somewhat inconsistent, and I only trained the model for 100 epochs, so it probably did not have enough time to learn these hard-to-predict inconsistencies. Where the CV-based detector had more false negatives (missed elements), this one was more prone to false positives (guessing extra elements). It also quite often made predictions that were a bit too large or a bit too small on only one of the sides, which did not happen in the training data. These mistakes are shown in Figure \ref{fig:yolo-mistakes}.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{diagrams/yolo_mistakes.pdf}
+    \caption{Examples of common mistakes made by the YOLO-based detector.}
+    \label{fig:yolo-mistakes}
+\end{figure}
+
+Since the final RL-based detector is mostly a proof of concept, its accuracy is not great. Figure \ref{fig:gov_predict_rl} shows its results on a simple website. While it clearly focuses on the correct areas, it very often undershoots or overshoots in some directions. I believe that with longer training or some more changes to the environment, actions, and reward function, these problems could be minimized.
+
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{results/rl_pred_gov.jpg}
+    \caption{Predictions of the final RL-based model on a simple website.}
+    \label{fig:gov_predict_rl}
+\end{figure}
 
 \section{Speed}
 
@@ -891,8 +906,24 @@ I believe there are ways to bring this time down. Modifying the shrink amounts o
 
 \section{Data requirements}
 
-Try training the RL-based detector and YOLO detector on datasets to sizes 100, 1,000, and 10,000 (current) and see the difference.
+Since one of the main motivations of using RL was that it could be less reliant on large quantities of data, I wanted to test how well it would compare to the YOLO based detector on smaller datasets. Both of the final models were trained on 8,000 images (I used only half of the 20,000 images in \cite{aydos2020} and left out 1,000 as validation data and 1,000 as testing data). I repeated the trainings on datasets of 1,000 images and 100 images.
 
+The RL models started training very similarly, after eight million time steps, they all had an evaluation score of around 38. After that, their improvement speed started to separate. After 20 million time steps, they were reaching stable evaluation scores of 65, 58, and 52, respectively. Looking at their performance on their training data showed scores of 25, 25, and 30 (remember that these are slowed down by the curriculum learning; more objects are added only once the model reaches an average TIoU of 0.7). This was a clear sign that the model with the smallest dataset was overfitting on the training data. The model with the middle dataset had bigger issues with generalization than the original one, but would likely still continue learning afterwards.
+
+The three YOLO models were trained until they stopped improving. The values of evaluation metrics on the validation data are shown in Table \ref{tab:yolo_results}. Inspecting the results visually, the model with the middle dataset was performing quite similarly to the original model, except sometimes creating two almost identical predictions, and also being less tight around the objects. The model with the smallest dataset had similar issues, but they were much more common, appearing on almost every object.
+
+\begin{table}
+    \centering
+    \begin{tabular}{c|cccc}
+        Dataset size & Precision & Recall & mAP50 & mAP50-95 \\
+         \hline
+        8,000 & 0.738 & 0.715 & 0.770 & 0.626 \\
+        1,000 & 0.648 & 0.655 & 0.660 & 0.503 \\
+        100   & 0.642 & 0.562 & 0.557 & 0.380 \\
+    \end{tabular}
+    \caption{The performance of YOLOv8n on different dataset sizes. In all metrics, higher is better.}
+    \label{tab:yolo_results}
+\end{table}
 
 \section{Implementation difficulty}
 
@@ -907,7 +938,7 @@ With CV-based detectors, it is more complicated. From my experience, I can confi
 I believe that the most time-efficient way to implement an element detector would be to use existing ML-based models for detecting difficult-to-process elements (namely, an OCR for texts and a YOLO like model for images), then removing these parts from the image and using a CV-based detector for the rest.
 
 \chapter*{Conclusion}
-
+It sucks
 
 \printbibliography[heading=bibintoc] %% Print the bibliography.
 
