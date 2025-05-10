@@ -58,16 +58,19 @@
     advisor     = {RNDr. Ondřej Krajíček},
     title       = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
     TeXtitle    = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
-    keywords    = {TODO, keyword2, ...},
-    TeXkeywords = {TODO, keyword2, \ldots},
+    keywords    = {deep reinforcement learning, user interface element detection, object detection, computer vision, PPO, YOLO},
+    TeXkeywords = {deep reinforcement learning, user interface element detection, object detection, computer vision, PPO, YOLO},
     abstract    = {%
 
-    This thesis assesses the feasibility of using deep reinforcement learning for detecting graphical user interface elements in web application screenshots. It does so by creating and training agents on environments of increasing difficulty that resemble the actual problem. Finally, it compares the resulting model with two prototypes developed using the usual approaches (traditional computer vision and deep supervised learning). We conclude that while training such a model using only reinforcement learning is possible, it does not bring many benefits for this particular problem.
+    This thesis investigates the feasibility of using deep reinforcement learning for detecting graphical user interface elements in web application screenshots. To do so, ten reinforcement learning environments of increasing complexity are developed, and agents are trained in each using a variety of reward functions, network architectures, and hyperparameters until an agent capable of solving each environment is achieved. The performance of the resulting model is then compared with two prototypes developed using traditional approaches: computer vision and deep supervised learning. The thesis concludes that, while training a model purely through reinforcement learning is feasible, it does not offer significant advantages for this particular problem.
     },
-    thanks      = {%
-      These are the acknowledgements for my thesis, which can
+    thanks      = {
+    I would like to express my sincere gratitude to my supervisor, RNDr. Ondřej Krajíček, for his invaluable guidance, insightful feedback, and unwavering support throughout the development of this thesis. His mentorship was instrumental in shaping the direction and quality of my work.
 
-      span multiple paragraphs.
+    My heartfelt thanks also go to the entire YSoft AIVA team for fostering such a supportive and collaborative environment. Without them, I would not have the opportunity to investigate such an interesting topic.
+    
+    Finally, I am deeply grateful to my family and friends for their continuous encouragement and understanding. Their support helped me stay motivated and focused, especially during the most challenging moments of this journey.
+
     },
     bib         = example.bib,
     %% Remove the following line to use the JVS 2018 faculty logo.
@@ -106,11 +109,13 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications solely based on visual information. To achieve this, they must reliably detect and localize interface elements in the captured image in order to infer the UI's hierarchical structure. This process is typically carried out using traditional computer vision algorithms or deep neural networks trained via supervised learning.
+Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications solely based on visual information. In order to achieve this, they must reliably detect and localize interface elements in the captured image to infer the UI's hierarchical structure. This process is typically carried out using traditional computer vision algorithms or deep neural networks trained via supervised learning.
 
-This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity are created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, ranging from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
+This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, ranging from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods, focusing primarily on ease of implementation and data requirements.
 
-The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of reinforcement learning. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, in the fifth chapter, the proposed approach is compared with traditional methods, with particular emphasis on implementation complexity and data requirements.
+The thesis concludes that while training an agent for UI element detection purely by RL is possible, it does not bring any sizable benefits over the currently used techniques, while being less accurate and harder to train.
+
+The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of RL. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, in the fifth chapter, the proposed approach is compared with traditional methods.
 
 \chapter{User interface element detection}
 
@@ -134,11 +139,11 @@ Graphical user interface (GUI) object detection is usually performed using tradi
 
 In this thesis, the term \enquote{traditional computer vision} refers to digital image processing algorithms that do not use machine learning but operate directly on pixel data. Traditional CV is challenging to use for object detection in photographs due to noise and unclear edges. However, it is well-suited for processing user interfaces. Screenshots typically lack noise (aside from occasional compression artifacts) and contain clearly defined edges
 
-A common approach involves applying an edge detection method (e.g., Canny or Sobel), followed by post-processing steps to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The resulting edge data are often combined with outputs from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. This process is employed in algorithms such as REMAUI~\cite{remaui} (a tool for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
+A common approach involves applying an edge detection method (e.g., Canny or Sobel), followed by post-processing steps to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The resulting edge data can be combined with outputs from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. This process is employed in algorithms such as REMAUI~\cite{remaui} (a tool for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
 
 Template matching represents another localization approach, though it lacks flexibility. It works reliably for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed GUI style). However, it is ineffective for mobile or web applications where GUI components vary widely in design~\cite{ODforGUI_CV_DL_or_both}.
 
-Despite recent advances in deep learning, traditional CV continues to offer several advantages. It can be much more efficient and straightforward to understand, making it easier to modify and debug. Each step of the algorithm can be observed, facilitating debugging and parameter adjustment. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which often require a lot of manual labor to create. Furthermore, this reliance increases the risk of obsolescence, as DL-based models may not generalize well to evolving GUI design trends~\cite{DLvsTCV}.
+Despite recent advances in deep learning, traditional CV continues to offer several advantages. It can be much more efficient and straightforward to understand, making it easier to modify and debug. Each step of the algorithm can be observed, facilitating debugging and parameter adjustment. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which require a lot of manual labor to create. Furthermore, this reliance increases the risk of obsolescence, as DL-based models may not generalize well to evolving GUI design trends~\cite{DLvsTCV}.
 
 \section{Supervised deep learning-based solutions}
 Over the past decade, state-of-the-art object detection algorithms have relied almost exclusively on deep neural networks incorporating convolutional layers. Two of the most prominent model families are Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO). Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case~\cite{ObjectDetectionHistorySurvey}.
@@ -163,7 +168,7 @@ The theory behind reinforcement learning is essential for understanding the term
 Unless stated otherwise, the notation and information used in this chapter are adopted from \textit{Grokking Deep Reinforcement Learning} by Miguel Morales~\cite{GDRL}.
 
 \section{Machine learning}
-Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It is often split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also sometimes stated, but these are generally considered modifications or combinations of the three primary categories.}~\cite{IB031}.
+Machine learning (ML) is the study of algorithms that allow computers to learn from data without explicit programming. It can be split into three main categories: supervised learning, unsupervised learning, and reinforcement learning\footnote{Other categories, such as semi-supervised or self-supervised learning, are also recognized, but these are generally modifications or combinations of the three primary categories.}~\cite{IB031}.
 
 In supervised learning (SL), the goal is to make predictions based on labeled data available during training, such as in classification or regression tasks. In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This approach can be used to, for example, separate the data into groups (clustering) or to generate new, similar data using models such as autoencoders or generative adversarial networks~\cite{IB031, PV021}.
 
@@ -249,7 +254,7 @@ Standard MDPs may be insufficient for accurately modeling real-world environment
 
 \section{Policy}
 With the environment formally defined as an MDP, we can also define the agent. The agent can be viewed as an entity that, upon receiving a state $s$ (or an observation of it), selects an action $a$, which results in a reward $r$ and a transition to a new state $s'$. As mentioned, the tuple $(s, a, r, s')$ is referred to as an experience. The entire sequence of these experiences is called a trajectory $\tau$. Since the final state of one experience is the initial state of the next, the trajectory can be simplified as follows: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that, depending on the type of task and definition of the terminal states, the trajectory can be infinitely long. A history is then some finite prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$.
-The agent's behavior is governed by a policy. A policy $\pi$ is a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite[p. 19]{PA230}.
+The agent's behavior is governed by a policy. A policy $\pi$ is a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite{PA230}.
 
 If the environment satisfies the Markov property, we can simplify the policy definition to just $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can also be memoryless. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might be helpful to differentiate between them).
 
@@ -284,7 +289,7 @@ If we know the underlying MDP, we can calculate it directly using the Bellman eq
 v_\pi(s) = \sum_a \pi(a\mid s) \cdot \sum_{s',r} p(s',r\mid s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
 \end{equation}
 
-Due to the recursive nature of this formula, it would be difficult to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used (often called policy evaluation). When the environment's dynamics are unknown, sample-based methods such as Monte Carlo and temporal-difference learning are employed to approximate value functions through interaction.
+Due to the recursive nature of this formula, it would be difficult to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used. When the environment's dynamics are unknown, sample-based methods such as Monte Carlo and temporal-difference learning are employed to approximate value functions through interaction.
 
 \subsection{Action-value function}
 
@@ -376,87 +381,90 @@ The environment class also requires the following methods to be implemented:
 \begin{itemize}
     \item \texttt{reset} -- method called to begin a new episode. It resets the environment to an initial state and returns the initial observation and a dictionary with auxiliary information for debugging or other purposes. It takes a seed value as an optional parameter.
     \item \texttt{step} -- performs a single time step of the environment. Its only input is the action to be performed, which has to adhere to the type defined in the initialization method. It transitions the environment to a new state, and returns the new observation, the reward obtained from the action, a flag indicating whether the state is terminal, a flag indicating whether the episode was truncated (e.g., due to a time limit), and again, a dictionary with auxiliary information.
-    \item \texttt{render} -- a method for getting the current state of the environment in a human-friendly format. Each environment can define multiple render modes, one of which can be selected during initialization. Common render formats include RGB frames, textual output, or sequences of RGB frames. This method can be either called manually by a user or, more often, by a monitoring wrapper of the environment.
+    \item \texttt{render} -- a method for getting the current state of the environment in a human-friendly format. Each environment can define multiple render modes, one of which can be selected during initialization. Common render formats include RGB frames, textual output, or sequences of RGB frames. This method can be called either manually by a user or by a monitoring wrapper of the environment.
     \item \texttt{close} -- a clean-up method. Should close render windows, end database connections, etc.
 \end{itemize}
 
 Once an environment is defined, it must be registered using the \texttt{gymnasium.envs.registration.register} function. Registered environments can be later created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a reinforcement learning algorithm.
 
 \section{Stable-Baselines3}
-Stable-Baselines3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} (SB3) is a Python library containing implementations of RL algorithms. It originated as a maintained fork of the OpenAI Baselines\footnote{\url{https://github.com/openai/baselines}} library but has since evolved to include numerous additional algorithms, an improved API, and comprehensive documentation. The algorithms are implemented using PyTorch, allowing simple modifications of the underlying neural networks and GPU-accelerated training. These algorithms interact with environments defined using the Gymnasium API described in Section~\ref{sec:gym}. The information in this section is from the official SB3 documentation~\cite{SB3-docs}.
+Stable-Baselines3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} (SB3) is a Python library that provides implementations of RL algorithms. It originated as a maintained fork of OpenAI's Baselines\footnote{\url{https://github.com/openai/baselines}} library but has since evolved to include numerous additional algorithms, an improved API, and comprehensive documentation. The algorithms are implemented using PyTorch, allowing simple modifications of the underlying neural networks and GPU-accelerated training. These implementations are designed to interact seamlessly with environments conforming to the Gymnasium API described in Section~\ref{sec:gym}. The information in this section is based on the official SB3 documentation~\cite{SB3-docs}.
 
-To create a new model, one instantiates a class provided by SB3 (such as \texttt{PPO}, \texttt{A2C}, or \texttt{DDPG}) and supplies the environment along with additional parameters, including hyperparameters, GPU selection, and logging options. The library also supports saving and loading models via the \texttt{save} and \texttt{load} methods.
+A new model is instantiated by creating an object of one of SB3’s algorithm classes (e.g., \texttt{PPO}, \texttt{A2C}, or \texttt{DDPG}) and providing the environment and additional parameters such as hyperparameters, GPU settings, and logging options. The library also supports saving and loading models via the \texttt{save} and \texttt{load} methods.
 
-Once a model has been created, it can be trained using the \texttt{learn} method, which trains the model for the provided amount of time steps. Additionally, a callback can be passed as well. Callbacks are special classes that can call functions when certain events happen during training. For example, the \texttt{EvalCallback} evaluates the model every $n$ episode and can additionally save the model on the new best mean reward. SB3 also provides an API for creating custom callbacks.
+Once a model has been created, it can be trained using the \texttt{learn} method, which trains the model for a specified number of time steps. Additionally, a callback can be supplied. Callbacks are special classes that trigger specified functions when certain events happen during training. For example, the \texttt{EvalCallback} evaluates the model every $n$ episodes and can be configured to save the model whenever a new highest mean reward is achieved. SB3 also provides an API for defining custom callbacks.
 
-Inference on a model is done through the \texttt{predict} method, which returns the model's decided action for a given observation.
+Model inference is performed using the \texttt{predict} method, which outputs the action selected by the model for a given observation.
 
-I chose this library over others mainly because it contains algorithm implementations, simple-to-use API, and good documentation. I chose not to implement the algorithms on my own since they would probably perform worse, and it is unlikely that these implementations would change the outcome of this thesis.
+I chose this library over others mainly because it contains algorithm implementations, a simple-to-use API, and extensive documentation. I decided not to implement the algorithms on my own since that would likely lead to inferior results.
 
 \section{Optuna}
 \label{sec:optuna}
 
-Optuna\footnote{\url{https://optuna.org/}} is an open-source framework used for automated hyperparameter search (or, in general, for optimizing any function with parameters). It uses state-of-the-art algorithms to suggest hyperparameters based on previous experiences, making it much more time-efficient than usual methods such as grid search. Once again, the information in this section is sourced from its official documentation~\cite{optuna-docs}.
+Optuna\footnote{\url{https://optuna.org/}} is an open-source framework used for automated hyperparameter search or, in general, for optimizing any function with parameters. It uses state-of-the-art algorithms to suggest hyperparameters based on previous evaluations, making it much more time-efficient than usual methods such as grid search. The information in this section is sourced from the official documentation~\cite{optuna-docs}.
 
-Optuna can optimize any objective function. Such function takes a \texttt{trial} object as an input, uses its methods like \texttt{trial.suggest\_int} or \texttt{trial.suggest\_categorical} to get the suggested hyperparameters and returns a float representing how well the objective was met (this is most often some accuracy metric, in the case of RL, it is the mean episode reward). A study is then created using the \texttt{optuna.create\_study} function. This study can then be optimized for a number of trials, after which it returns the hyperparameters that were found to be the best.
+Optuna is able to optimize arbitrary objective functions. The objective function receives a \texttt{trial} object as input and uses methods such as \texttt{trial.suggest\_int} or \texttt{trial.suggest\_categorical} to obtain hyperparameter values. It then returns a floating-point value that quantifies the performance of the model, typically an accuracy metric, or, in the context of RL, the mean episode reward. A study is then created using the \texttt{optuna.create\_study} function. This study can be optimized for a number of trials, after which it returns the hyperparameters that performed the best.
 
-A study can be connected to a relational database that stores previous trials. The results can then be visualized using Optuna Dashboard\footnote{\url{https://optuna-dashboard.readthedocs.io/}}. It plots information such as hyperparameter importance, the tuning progression, and much more.
+A study can be connected to a relational database that stores previous trial results. Those can then be visualized using Optuna Dashboard\footnote{\url{https://optuna-dashboard.readthedocs.io/}}. It provides visualizations such as hyperparameter importance, optimization progress over trials, and distribution plots of parameter values.
 
-It is also possible to run multiple Optuna instances in parallel using the same database. This allows for effortless distributed tuning on multiple machines with almost linear scaling.
+Multiple Optuna instances can run in parallel using the same database. This allows for effortless distributed tuning on multiple machines with almost linear scaling.
 
-Optuna can also be configured to prune attempts unlikely to beat the current best attempt if the objective function can produce intermediate values. This change can speed up the process significantly.
+If the objective function yields intermediate results, Optuna can be configured to perform pruning, terminating unpromising trials early. This change can reduce the required time significantly.
 
 \section{Hardware}
 
-Most state-of-the-art RL algorithms are based on deep learning. Powerful enough hardware is needed to train large neural networks in a reasonable time. Most of the experiments in this thesis were done on my personal computer (Intel i5-12400, NVIDIA RTX 3080). For long-running experiments, I used one of Y Soft's GPU nodes (AMD Ryzen 9 5950X, NVIDIA RTX A4000). The speed of these two machines is very comparable in a single environment, but the 16 cores of the AMD Ryzen 9 5950X significantly outperform the Intel i5-12400's six cores in vectorized environments.
+Most state-of-the-art RL algorithms rely on deep learning techniques. Training large neural networks efficiently requires sufficiently powerful hardware. Most of the experiments in this thesis were done on my personal computer equipped with an Intel i5-12400 CPU and an NVIDIA RTX 3080 GPU. For long-running experiments, I used one of Y Soft's GPU nodes equipped with an AMD Ryzen 9 5950X CPU and an NVIDIA RTX A4000 GPU. The performance of these two systems is comparable when training in a single environment. However, in vectorized environments, the 16-core AMD Ryzen 9 5950X significantly outperforms the six-core Intel i5-12400.
 
 \chapter{Experiments}
 \label{ch:experiments}
 
+This chapter presents the reinforcement learning environments designed to simulate the target task, along with the experiments conducted to develop agents capable of solving it. At the end, one section is dedicated to potential further improvements.
+
 \section{Defining the problem}
 \label{sec:problem_definition}
 
-Before we start training models, we must define the problem we are trying to solve. The goal is to create an algorithm that receives an image as input (be it directly a screenshot of a website or some preprocessed version to simplify the task). It outputs a set of bounding boxes, each of which is the bounding rectangle of an object in the image. The algorithm should find all objects in the image.
+Before training models, we must define the problem we are trying to solve. The goal is to create an algorithm that receives an image as input (be it a direct screenshot of a website or a preprocessed version to simplify the task). It outputs a set of bounding boxes, each corresponding to an object in the image. The algorithm should find all objects in the image.
 
-With regular supervised learning, the variable length of the output could be a challenge. Each image can contain a different amount of objects. Thankfully, this is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform such actions that are convertible into bounding boxes (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions combined create a selection). Already found objects have to be marked somehow since the agent has no memory (see Subsection \ref{subsec:markov_property}).
+With regular supervised learning, the variable length of the output presents a challenge. Each image can contain a different number of objects. This is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform actions that are convertible into bounding boxes (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions are combined to form a selection). Previously detected objects must be marked in some way, since the agent has no memory (see Subsection~\ref{subsec:markov_property}).
 
-First, we have to decide on the state and action spaces and the representation of the states and actions. The input image can be used directly as the state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values of this tensor are integers in the range 0-255 or real numbers in the range 0-1 after normalization. The \texttt{Box} Gymnasium type is ideal for this representation. In theory, the \texttt{MultiDiscrete} could be more suitable as the values are discrete, not continuous, but SB3 does not currently support using convolutional layers on discrete spaces.
+First, the state and action spaces, along with their representations, must be defined. The input image serves directly as the environment state. More formally, the input type will be represented by a tensor of size $C\times M \times N$ where $C$ is the channel count (3 for RGB images, 1 for grayscale and binary images), $M$ and $N$ are the width and height of the image. The values in this tensor are either integers in the range 0--255 or normalized real numbers in the range 0--1, depending on preprocessing. The \texttt{Box} Gymnasium type is ideal for this representation.
 
-The representation of actions is more complicated than that of the state. At first, I again chose the most straightforward mapping, where each action is one selection; starting from Section \ref{sec:iterative}, I switched to a different approach. Each action is a tuple of four real numbers from 0 to 1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center, and the other two represent the width and height. Other representations of a bounding box using four real numbers are possible, one of which is explored in Subsection \ref{subsec:different_rect_repr}. Such action space can also be defined using the \texttt{Box} Gymnasium type.
+The representation of actions is more complicated than that of the state. Initially, I chose a straightforward mapping in which each action corresponds to one selection. Beginning in Section \ref{sec:iterative}, a different approach is introduced. Each action is a tuple of four real numbers from 0 to 1. The first two numbers represent the $x$ and $y$ coordinates of the selection's center, and the other two represent the width and height. Other representations of a bounding box using four real numbers are possible, one of which is explored in Subsection \ref{subsec:different_rect_repr}. This action space can also be defined using the \texttt{Box} Gymnasium type.
 
 \section{Choosing an algorithm}
-As discussed in Section \ref{sec:algos}, many different reinforcement learning algorithms exist. The Stable-Baselines3 library implements a total of seven\footnote{Seven more experimental algorithms are available in the contribution version of the library.}: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER}\footnote{In newer versions of SB3, \texttt{HER} is no longer a separate algorithm but just a type of a replay buffer.}, \texttt{PPO}, \texttt{SAC} and \texttt{TD3}. Of course, the algorithm is one of the things we can change and experiment with, but we have to choose one as a starting point.
+\label{sec:algo_choice}
+As discussed in Section \ref{sec:algos}, various reinforcement learning algorithms are available. The Stable-Baselines3 library implements seven algorithms: \texttt{A2C}, \texttt{DDPG}, \texttt{DQN}, \texttt{HER}\footnote{In newer versions of SB3, \texttt{HER} is no longer a separate algorithm but a type of replay buffer.}, \texttt{PPO}, \texttt{SAC}, and \texttt{TD3}.\footnote{Seven additional experimental algorithms are available in the contribution version of the library.} While the choice of algorithm can be varied and experimented with, one must be selected initially.
 
-I decided on \texttt{PPO} mainly through a process of elimination. First of all, \texttt{TD3} is an improvement of \texttt{DDPG} and \texttt{PPO} is an improvement of \texttt{A2C}. It is unlikely that the simpler versions would perform better, so we can eliminate them. As stated, the action space is continuous, eliminating \texttt{DQN} (later in the thesis, where I switch to discrete actions, \texttt{SAC}, \texttt{DDPG} and \texttt{TD3} are unusable since they only support continuous actions). Since the state is an image, we want to avoid algorithms that utilize a replay buffer because even a binary image of $100\times100$ pixels requires over a kilobyte of memory. The size might increase even further, which could lead to hardware bottlenecks. This eliminates \texttt{HER}, \texttt{SAC} and \texttt{TD3}, leaving us only with \texttt{PPO}.
+The decision to use \texttt{PPO} was primarily made through a process of elimination. To begin with, \texttt{TD3} is an improvement over \texttt{DDPG}, and \texttt{PPO} is an improvement over \texttt{A2C}. Given this, the simpler variants are unlikely to outperform their successors and can thus be excluded. As previously stated, the action space is continuous, which excludes \texttt{DQN}. Later in the thesis, when discrete actions are used, \texttt{SAC}, \texttt{DDPG}, and \texttt{TD3} become unsuitable, as they only support continuous action spaces. Given that the state is represented as an image, it is preferable to avoid algorithms that use a replay buffer. Even a binary image of size $100\times100$ pixels requires over a kilobyte of memory. The memory requirements may grow, potentially resulting in hardware bottlenecks. This constraint further eliminates \texttt{HER}, \texttt{SAC}, and \texttt{TD3}, making \texttt{PPO} the only remaining viable option.
 
-\texttt{PPO} is also the recommended algorithm for both continuous and discrete actions when multiprocessing is available according to the SB3 documentation \cite{SB3-docs}.
+According to the SB3 documentation \cite{SB3-docs}, \texttt{PPO} is also the recommended algorithm for both continuous and discrete actions when multiprocessing is available.
 
 \section{Custom environments}
-It might be tempting to start training in an environment that simulates the final problem. When I initially attempted this approach, the results were unsatisfactory. The complexity of the setup made experimentation difficult: if a change in parameters led to equally poor results, it was unclear whether the adjustment was ineffective or if the current implementation was so far from ideal that even a beneficial change would not have a noticeable effect. So, instead, I started with a very simplified version of the final problem. Once I reached satisfactory results, I could move on to a more complex task and repeat this process until returning to the final environment with enough knowledge to complete it.
+An intuitive approach may be to begin training in an environment that closely simulates the final problem. However, initial attempts using this method yielded poor results. The complexity of the setup made experimentation difficult: when a parameter change produced similarly poor results, it was unclear whether the modification was ineffective or whether the overall implementation was too suboptimal for improvements to have a measurable impact. Therefore, I began with a significantly simplified version of the final problem. Once promising results were achieved, I could advance to more complex tasks, repeating this process until sufficient understanding was gained to address the final environment effectively.
 
-This gradual increase in difficulty also allows for transfer learning (reusing learned knowledge on a similar task). I could train a model on a simpler version of the problem and then fine-tune it on a more complex one. It is more likely that a model that can find rectangles will be able to learn to find other shapes than a model that is randomly initialized.
+This gradual increase in difficulty also enables transfer learning, where knowledge acquired from a simpler task is leveraged to improve performance on a related, more complex task. A model can first be trained on a simplified version of the problem and subsequently fine-tuned on a more complex variant. A model that has learned to detect rectangles is more likely to generalize to detecting other shapes than one that is randomly initialized.
 
-The following sections discuss the intermediate environments in greater detail and provide information on all the steps and experiments I took to solve them.
+The following sections provide a detailed overview of the intermediate environments, including the steps and experiments conducted to solve them.
 
 \section{Static square of uniform size}
 % env v0 %
-The simplest problem I could think of that still resembles the real problem was the following:
+The simplest problem that still approximates the real task is defined as follows:
 \begin{itemize}
-    \item State: a $100\times100$ pixel binary image with a square of non-zero values in the middle. The position of this square is always the same between episodes, and its size does not change. An example is shown in Figure \ref{fig:env0}
-    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. The action does not affect the state since the episode is always just one step long.
-    \item Reward: The reward is determined using the Intersection over Union (IoU) metric (area of the intersection of the ground truth bounding box and the guess divided by the area of their union). Non-overlapping bounding boxes always have an IoU of zero, no matter how far away they are. In those cases, the reward is equal to minus the distance of the centers of the bounding boxes to encourage moving the boxes closer together.
+    \item State: a $100\times100$ pixel binary image with a square of non-zero values in the middle. The square maintains a fixed position and size across all episodes. An example is shown in Figure \ref{fig:env0}
+    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. The action does not modify the state, as each episode consists of a single time step.
+    \item Reward: The reward is calculated using the Intersection over Union (IoU) metric, which measures the ratio of the overlapping area between the predicted and ground-truth bounding boxes to the area of their union. Non-overlapping bounding boxes have an IoU of zero, regardless of their relative distance. In such cases, the reward is set to the negative distance between the centers of the predicted and ground-truth bounding boxes.
     \item Algorithm: \texttt{PPO} with the default \texttt{CnnPolicy} provided by SB3 (the network architecture is shown in Figure \ref{fig:cnn_policy} in the Appendix), default hyperparameters.
 \end{itemize}
 
 \begin{figure}
-    \includegraphics[width=0.5\linewidth]{env_examples/env0.jpg}
+    \includegraphics[width=0.25\linewidth]{env_examples/env0.jpg}
     \caption{Example of the simplest environment with a static square.}
     \label{fig:env0}
 \end{figure}
 
-I expected the model to overfit very quickly since the state was always identical, and there was a single action that always yielded the best possible reward. The model got to an IoU of 0.94 after around 160,000 time steps, but surprisingly, it started to critically forget shortly after, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior happened less and less for the more complex environments, I assume the problem was too simple for a complex algorithm such as \texttt{PPO}.
+I expected the model to overfit quickly since the state was always identical. The model reached an average IoU of 0.94 after around 160,000 time steps, but it started to critically forget shortly after, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior occurred less frequently in the more complex environments, I assume the problem was too simple for a complex algorithm such as \texttt{PPO}.
 
-Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Since an episode always consists of precisely one observation, the highest possible reward is 1 (since that is the highest achievable IoU). The $x$-axis shows the elapsed time steps.
+Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. Because each episode consists of a single observation, the maximum achievable reward is 1, corresponding to a perfect IoU. The $x$-axis shows the elapsed time steps.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v0.pdf}
@@ -464,11 +472,9 @@ Figure \ref{fig:v0_rew} shows the mean reward per episode during the training. S
     \label{fig:v0_rew}
 \end{figure}
 
-
-
 \section{Randomly placed square of uniform size}
 % env v1 %
-The next step forward was to make the square move. The initial state was created by placing the square in a randomly chosen position within the image. All the other parameters (reward, action, and algorithm) remain the same. Figure \ref{fig:env1} shows some examples of this environment.
+The next progression involved randomizing the square's position within the image. All the other parameters (reward, action, and algorithm) remained unchanged. Figure \ref{fig:env1} shows some examples of this environment.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env1.pdf}
@@ -476,12 +482,12 @@ The next step forward was to make the square move. The initial state was created
     \label{fig:env1}
 \end{figure}
 
-The best model could guess the bounding box's position pretty well, usually within the actual square. However, it struggled with the size even though, again, there was a single correct answer. It even sometimes predicted the width or height of zero, even though that always resulted in a zero reward. Just like the previous model, this one also started to catastrophically forget. Even though the result was not optimal, it showed that the model could handle the movement, so I decided to continue.
+The best-performing model was able to localize the bounding box within the correct region of the square. However, it struggled with accurately predicting the size. In some cases, it predicted a width or height of zero, which consistently resulted in a reward of zero. Similar to the previous model, this one also exhibited catastrophic forgetting. Although the results were suboptimal, the experiment demonstrated that the model could handle varying object positions.
 
 \section{Single randomly placed rectangle}
 \label{sec:moving_rectangle}
 % env v2 %
-The following environment was, once again, very similar, the only exception being that the object could now have any size, not just a perfect square of uniform size. Both the placement and size were chosen randomly but with a few constraints. The rectangle could not have a width or height of less than 10 percent of the image, and it could not overflow outside of the image. A few examples are shown in Figure \ref{fig:env2}.
+The next environment closely resembled the previous one, with the key difference that the object could now vary in size rather than being a fixed-size square. Both the placement and size were chosen randomly, but with a few constraints. The rectangle’s width and height were constrained to be at least 10 percent of the image dimensions, and its position was restricted to ensure it remained fully within the image boundaries. A few examples are shown in Figure \ref{fig:env2}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env2.pdf}
@@ -489,9 +495,9 @@ The following environment was, once again, very similar, the only exception bein
     \label{fig:env2}
 \end{figure}
 
-This time, I also wanted to try the other network architecture provided by the SB3 library \texttt{MlpPolicy}, which has a simpler, non-CNN-based architecture (shown in detail in Figure \ref{fig:mlp_policy} in the Appendix). The network has fewer parameters (1.3 million compared to 2.7 million), but for such a simple problem, that could still be more than enough.
+In this experiment, I also evaluated the alternative architecture provided by the SB3 library, \texttt{MlpPolicy}, which is a simpler, non-convolutional model (detailed in Figure \ref{fig:mlp_policy} in the Appendix). The network contains fewer parameters (1.3 million versus 2.7 million).
 
-The MLP-based policy outperformed the CNN-based one and seemed a lot more stable. While it had some dips in its performance (probably caused by exploration), it always recovered and did not critically forget, as visible in Figure \ref{fig:v2_mlp_cnn}.
+The MLP-based policy outperformed its CNN-based counterpart, and the training progression was more stable. While occasional declines in performance were observed (likely due to exploration), the model consistently recovered and did not exhibit catastrophic forgetting, as shown in Figure \ref{fig:v2_mlp_cnn}.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v2_mpl_cnn.pdf}
@@ -502,11 +508,11 @@ The MLP-based policy outperformed the CNN-based one and seemed a lot more stable
 \section{Multiple rectangles}
 \label{sec:multi-rect}
 % env v3 %
-Since the performance of detecting a single object seemed pretty good, the next logical step was to add more objects. The next environment had the following properties:
+Since the model demonstrated satisfactory performance in detecting a single object, the next logical step was to introduce multiple objects. The next environment had the following properties:
 \begin{itemize}
-    \item State: consists of a binary $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random place. It is added to the image if it does not overlap with any already placed rectangle. Because of this randomness, the amount of objects changes between episodes; it can be between 1 and 5, but on average, 3.5 objects are present. Four examples can be seen in Figure \ref{fig:env3}.
-    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. If the predicted bounding box overlaps with any objects, those objects are erased from the state (in their entirety, even if the prediction does not cover their whole area).
-    \item Reward: The reward calculation is similar to the previous environments. If the prediction overlaps an object, its IoU with the guess is the reward (if it overlaps multiple, then the maximum IoU is given). The episode terminates when all objects are removed. The episode is truncated if the number of guesses matches the number of initially placed objects. Note that the model is not directly punished for selecting more than one object. However, since only one reward is given, it is more beneficial to select them separately.
+    \item State: consists of a binary $100\times100$ pixel image. Five attempts are made at placing a rectangle of a random size in a random position. It is added to the image if it does not overlap with any already placed rectangle. Because of this randomness, the number of objects changes between episodes, ranging from 1 to 5, with 3.5 being the average. Four examples can be seen in Figure \ref{fig:env3}.
+    \item Action: a tuple of four real numbers representing the bounding box as described in Section \ref{sec:problem_definition}. If the predicted bounding box overlaps with any objects, those objects are removed from the state entirely, even if the prediction only partially covers them.
+    \item Reward: The reward calculation is similar to the previous environments. If the prediction overlaps an object, its IoU with the guess is the reward (if it overlaps multiple, then the maximum IoU is given). The episode terminates when all objects are removed. The episode is truncated if the number of guesses matches the number of initially placed objects. It is important to note that the model does not receive a direct penalty for selecting more than one object. However, since only one reward is given, it is more beneficial to select them separately.
 \end{itemize}
 
 \begin{figure}
@@ -515,29 +521,29 @@ Since the performance of detecting a single object seemed pretty good, the next 
     \label{fig:env3}
 \end{figure}
 
-Again, I tried both MLP and CNN policies. This time, they both performed similarly, stabilizing at a mean reward per episode of around 0.75 after around 400,000 time steps. At first glance, the results might seem just as good as in the previous environment. However, since the episodes lasted multiple time steps (3.5 on average), the maximum possible reward per episode was now around 3.5, whereas before, it was just 1. This poor result was despite both agents doing an average of 3 actions per episode.
+Both \texttt{MlpPolicy} and \texttt{CnnPolicy} were evaluated. This time, they both performed similarly, stabilizing at a mean reward per episode of around 0.8 after around 500,000 time steps. At first glance, the results might seem comparable to the ones in the previous environment. However, because episodes now consisted of multiple time steps, the maximum possible reward per episode increased to, on average, 3.5, in contrast to the previous maximum of 1. This suboptimal result occurred despite both agents executing an average of three actions per episode.
 
 \subsection{Different action definition}
 \label{subsec:different_rect_repr}
 
-As mentioned in Section \ref{sec:problem_definition}, using four real numbers, there are multiple ways to define a bounding box. Before, I interpreted the action as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. My thought process was that since convolutions are translation invariant but not scale invariant, it should be easier to find the corners than the entire object whose size is variable.
+As mentioned in Section \ref{sec:problem_definition}, using four real numbers, there are multiple ways to define a bounding box. Before, I interpreted the action as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. The rationale was that, since convolutions are translation-invariant but not scale-invariant, detecting the corners might be easier than detecting the full object, especially when its size varies.
 
-This change slightly improved the performance of the CNN-based model (from 0.75 to 1) but surprisingly made the MLP-based model worse by around 33 percent.
+This change slightly improved the performance of the CNN-based model (from 0.8 to 1), but the MLP-based model's performance dropped from 0.8 to 0.5.
 
 \subsection{Transfer from previous environment}
 
-Since the previous environment used identical definitions of space and actions, it was possible to reuse its weights in this environment with the potential of transferring some of the learned knowledge. While the transferred agent did start much better, it quickly forgot everything and did not catch up to the agent initialized with random weights.
+As the previous environment used the same state and action definitions, it was possible to reuse the trained weights in the current environment, enabling the potential for knowledge transfer. Although the transferred agent initially performed better, it quickly degraded and ultimately failed to match the performance of the randomly initialized agent.
 
 \subsection{Changing the network architecture}
 \label{subsec:arch_change}
 
-The training progressions of the experiments in this section showed a similar trend. They started off learning relatively quickly, making significant progress. After the first 200,000 time steps, the progress slowed down dramatically. This plateauing could hint at the agent being too simple for the environment and unable to learn to interact with it optimally.
+The training trajectories of the experiments in this section exhibited a similar trend. The models initially learned relatively quickly and made significant progress. After the first 200,000 time steps, the progress slowed down dramatically. This plateauing may indicate the agent's network being too simple and unable to learn the optimal strategy.
 
-Since SB3 uses PyTorch in the background, modifying the underlying neural networks is relatively simple. In the default \texttt{CnnPolicy}, the actor and the critic share a feature extractor with three convolutional layers and one fully connected layer. Then, each of them has a single fully connected layer (for more detail, see Figure \ref{fig:cnn_policy} in the Appendix).
+Since SB3 is built on PyTorch, modifying the underlying neural networks is relatively straightforward. In the default \texttt{CnnPolicy}, the actor and the critic share a feature extractor with three convolutional layers and one fully connected layer. Each of them then includes a single separate fully connected layer (for more detail, see Figure \ref{fig:cnn_policy} in the Appendix).
 
-I asked ChatGPT to suggest a slightly larger architecture since designing a neural network architecture is not something I have done previously. It suggested adding an extra fully connected layer to the feature extractor and two fully connected layers to the actor and the critic. This meant that the model now had around 6 million parameters. The new architecture is shown in more detail in the Appendix in Figure \ref{fig:bigger_net_policy}.
+Since I had limited experience designing neural network architectures, I consulted ChatGPT for suggestions on a slightly larger design. It suggested adding an extra fully connected layer to the feature extractor and two fully connected layers to the actor and the critic. As a result, the model contained approximately 6 million parameters. The new architecture is shown in more detail in the Appendix in Figure \ref{fig:bigger_net_policy}.
 
-This new network was a definite improvement. It outperformed the simple network and continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} compares the bigger network and the best \texttt{CnnPolicy} model (the only change between these two trainings was the network architecture).
+This new architecture demonstrated a clear improvement. It outperformed the simple network and continued learning even after more than 7 million episodes. Figure \ref{fig:v3_bigger_net} compares the bigger network and the best \texttt{CnnPolicy} model (the only change between these two trainings was the network architecture).
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v3_cnn_vs_biggernet.pdf}
@@ -545,19 +551,19 @@ This new network was a definite improvement. It outperformed the simple network 
     \label{fig:v3_bigger_net}
 \end{figure}
 
-The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. One problem that brings the average down is that sometimes when the image contained two objects far apart, the model got confused and repeatedly predicted a bounding box between them until the episode was truncated. An example of a situation where this problem occurred can be seen in Figure \ref{fig:v3_stuck}.
+The resulting model took around 6 hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. One factor that reduced the average reward was that, when the image contained two objects far from one another, the model repeatedly predicted a bounding box positioned between them until the episode was truncated. An example of a situation where this problem occurred can be seen in Figure \ref{fig:v3_stuck}.
 
 \begin{figure}
     \centering
     \includegraphics[width=0.5\linewidth]{results/v3_stuck.png}
-    \caption{Example of the model getting stuck when two objects are far apart. White rectangles are the actual objects, and grey is the prediction.}
+    \caption{Example of the model getting stuck when two objects are far apart. White rectangles are the actual objects, and gray is the prediction.}
     \label{fig:v3_stuck}
 \end{figure}
 
 \section{Different shapes}
-\label{sec:different_shaps}
+\label{sec:different_shapes}
 %v4 env%
-Now that the model could locate multiple rectangles in a single image with quite a reasonable accuracy, the next step was introducing other shapes. This new environment was identical to the previous one, but there could also be ellipses and triangles instead of just rectangles. Since the rules were still the same, there were an average of 3.5 objects, and their bounding boxes did not collide. Figure \ref{fig:env4} shows some examples of this environment.
+Now that the model could locate multiple rectangles in a single image, the next step was to introduce other shapes. This new environment was identical to the previous one, but the state could also contain ellipses and triangles instead of just rectangles. Since the rules remained unchanged, there were, on average, 3.5 objects per image, and their bounding boxes did not overlap. Figure \ref{fig:env4} shows some examples of this environment.
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{env_examples/env4.pdf}
@@ -565,26 +571,27 @@ Now that the model could locate multiple rectangles in a single image with quite
     \label{fig:env4}
 \end{figure}
  
-The training on my bigger network started off very similarly to the previous environment, but it never reached quite the same results, stopping at an average reward of around 1.5.
+Training with the larger network initially resembled that of the previous environment. However, after 2,500,000 time steps, it stopped learning at a mean episode reward of just over 1.5.
 
-Since the problem was similar to the previous one, I tried using transfer learning with the best model from the previous environment. It started with good results and stayed at a reward of around 2.0 for the rest of the training, only improving slightly.
+Since the problem was similar to the previous one, I tried using transfer learning with the best model from the previous environment. After just 150,000 time steps, it got to a reward of 1.9 and then slowly climbed to a reward of 2.2 for the rest of the training.
 
-This result showed me that it was possible to get good results. However, I wanted to avoid transfer learning until the very end because, if needed this early on, it would create a very long and impractical chain of models that depend on one another. For those reasons, I wanted to improve the network further.
+This result demonstrated that achieving strong performance in this environment was feasible. However, I wanted to avoid transfer learning until the very end because, if necessary this early on, it would create a very long and impractical chain of models that depend on one another. Therefore, I aimed to improve the network architecture further.
 
 \subsection{ResNet-18 feature extractor}
 \label{subsec:resnet}
 
-It is common not to create your feature extractor from scratch but instead to use one from an already existing network trained on a similar problem \cite[p. 256]{DLforVisualSystems}.
+It is common practice not to design a feature extractor from scratch but to use one derived from a pre-trained network on a similar task~\cite{DLforVisualSystems}.
 
-ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple architecture sizes, such as ResNet-18, ResNet-34, ResNet-50, and more. I decided to try the smallest one since even that would be a significant upgrade over the current feature extractor.
+ResNet is a model architecture first proposed in the paper \textit{Deep Residual Learning for Image Recognition} \cite{ResNet18}. It introduced multiple architecture sizes, such as ResNet-18, ResNet-34, ResNet-50, and more.
 
 ResNet-18 is a convolutional neural network with 18 layers and residual (skip) connections that help mitigate vanishing gradients. Each convolution is typically followed by batch normalization. While the original ResNet ends with an average pooling layer, the PyTorch implementation uses an adaptive average pooling layer, which ensures a fixed-size output regardless of the input dimensions.
 
-A slight complication is that ResNet-18 takes colored images (3 channels) as input, while the environment uses binary images (1 channel). To solve this issue, I added a convolutional layer at the beginning with a kernel of size $1\times1\times3$, which creates three feature maps from the one-channel image. The entire architecture is shown in the Appendix in Figure \ref{fig:resnet_arch}. I also removed the last fully connected layer that is normally used for classification.
+A minor complication is that ResNet-18 accepts color images with three channels as input, whereas the environment produces binary images with a single channel. To solve this issue, I added a convolutional layer at the beginning with a $1\times1$ kernel, which transforms the single binary channel into three feature maps. The entire architecture is shown in the Appendix in Figure \ref{fig:resnet_arch}. I also removed the last fully connected layer that is normally used for classification.
 
-It is important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. This dataset differs from our use case, which could mean the knowledge will not transfer well.
+It is important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset \cite{torchvision2016}. As this dataset is quite different from my use case, the effect of the pre-trained feature extractor could be lowered.
 
-I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were very poor. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. This time, the training went much better, reaching a reward of around 2.8 in less than 2.5 million time steps. Lastly, I also wanted to test whether the pre-trained weights made any difference compared to randomly initialized weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
+I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were unsatisfactory, reaching a mean episode reward of 0.5 after 200,000 time steps and not improving further. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. In this test, the training performance improved significantly, achieving a reward of approximately 2.8 in under 2.5 million time steps.
+To test whether it was the larger feature extractor or the pre-trained weights that caused this improvement, I ran another experiment, where the feature extractor was initialized randomly. This experiment resulted in a mean episode reward of under 2, proving the importance of pre-trained weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure \ref{fig:v4_resnet_graph}. 
 
 \begin{figure}
     \includegraphics[width=1\linewidth]{graphs/v4_resnet_graph.pdf}
@@ -592,46 +599,42 @@ I tried again in the same environment. At first, I used the weights from PyTorch
     \label{fig:v4_resnet_graph}
 \end{figure}
 
-While the performance improvement was significant, it slowed down the training notably. It took around 2.5 hours for one million time steps, which was around three times slower than before.
+Although the performance improvement was substantial, it significantly increased the training time. Training one million time steps required approximately 2.5 hours, which was about three times longer than with the previous architecture.
 
 \section{Hollow shapes}
 %env 5%
-One considerable simplification we are currently undertaking is that each position in the image can belong to at most one object. To put one object inside another, we need to mark only its edge; otherwise, the inside object would not be visible. The only change in this environment is that the objects are drawn as outlines, as visible in Figure \ref{fig:env5}.
+A significant simplification in the current setup is that each pixel in the image can belong to at most one object. To allow one object to appear inside another, only its outline must be drawn. Otherwise, the inner object would be obscured. The next environment implemented this change. Objects were drawn as outlines, as illustrated in Figure \ref{fig:env5}. This modification had minimal impact on the training performance.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{env_examples/env5.pdf}
-    \caption{Four examples of the environment with multiple shapes of objects}
+    \caption{Four examples of the environment with multiple shapes of objects where only outlines are drawn.}
     \label{fig:env5}
 \end{figure}
- 
-This change had little to no effect on the training progression.
 
 \section{Bigger images}
 %env 6%
-At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since we only need to locate the objects, which should not require pixel-sized details, some downscaling is possible, but squashing the image down to $100\times100$ pixels would likely be too much. Because of this, I wanted to experiment with larger image states.
+At this point, I was working with images of size $100\times100$ pixels, whereas AIVA currently uses a resolution of $1920\times1080$ pixels. Since object localization does not require pixel-level precision, some downscaling is feasible. However, reducing the image to $100\times100$ pixels is likely too aggressive. To address this problem, I experimented with larger image states.
 
-Thanks to the aforementioned adaptive average pooling layer used in the ResNet-18 feature extractor, changing the image size would not require manual network architecture modifications.
+The largest image resolution at which training could be initiated was $640\times480$ pixels, since with bigger resolutions, the GPU memory size was not sufficient. However, even then, the training speed slowdown was so significant that I continued with a state size of $200\times200$ pixels, which still slowed down the training by a factor of two.
 
-Due to hardware limitations (GPU memory), the largest state with which I could get a training running was $640\times480$ pixels. However, even then, the training speed slowdown was so significant that I decided to continue with a state size of $200\times200$ pixels (this slowed down the training around two times).
-
-The size increase did not cause significant differences in the training progression. However, since the image was bigger than before, more objects were placed (7 on average). Unfortunately, this caused the reward per object to drop significantly. The model learned to place large bounding box predictions in relevant areas. This strategy resulted in a positive reward but was far from optimal since it usually removed multiple objects simultaneously. The likely cause was that the current reward function did not punish selecting multiple objects at once directly. I came up with two new algorithms to calculate the reward in the case where the guess bounding box intersected multiple objects:
+The size increase did not cause significant differences in the training progression. However, since the image was bigger than before, more objects were placed (7 on average). The model learned to place large bounding box predictions in relevant areas. This strategy resulted in a positive reward but was far from optimal. This behavior was likely due to the reward function not explicitly penalizing the selection of multiple objects in a single prediction. To address this, I proposed two alternative algorithms for computing the reward when the predicted bounding box intersects multiple objects:
 
 \begin{itemize}
-    \item Find all objects that intersect with the guess. Find the object with the biggest overlap and calculate its IoU. Calculate the sum of the overlap areas of all the other intersecting objects with the guess, divide this sum by the guess' areas, and subtract it from the IoU.
-    \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant (I chose ten).
+    \item Find all objects that intersect with the guess. Find the object with the biggest overlap and calculate its IoU. Calculate the sum of the overlap areas of all the other intersecting objects with the guess, divide this sum by the area of the predicted bounding box, and subtract it from the IoU.
+    \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant.
 \end{itemize}
 
-The first option did help, bringing the per-object IoU from 0.5 to around 0.6. The second one had a very minimal impact. While IoU of 0.6 is usually considered acceptable \cite[p. 291]{DLforVisualSystems}, this experiment showed me that my current solution had problems even with an object count of less than 10, which is not acceptable since an average website probably contains closer to 100 objects.
+The first option did help, bringing the per-object IoU from 0.5 to around 0.6. The second one had a very minimal impact. Although an IoU of 0.6 is generally regarded as acceptable \cite{DLforVisualSystems}, this experiment indicated that the current solution struggled even with fewer than ten objects, which is concerning given that a typical website contains many more.
 
 \section{Hierarchical environment}
 \label{sec:hierarchical-env}
 
-So far, all the environments have had objects that did not intersect. They were independent; thus, the order in which they were selected did not matter. This, of course, differs from how actual websites look. They have a hierarchy of objects (one can contain many others). The next step was to create an environment that would represent this more faithfully.
+Up to this point, all environments contained non-overlapping objects. The objects were independent, meaning the order in which they were selected had no impact. This differs from how actual websites look. They have a hierarchy of objects (one can contain many others). The next step was to create an environment that would represent this structure more faithfully.
 
-At first, I tried to use the same technique as before -- randomly attempting to place objects that do not overlap, but this time, I allowed such overlaps where one object was entirely inside another. This strategy did not work well; the number of objects differed significantly between attempts, they were often placed very close to one another, and the depth of the hierarchy was shallow. So, instead, I created a generator that directly created a tree-like structure.
+Initially, I attempted to use the same technique of randomly placing non-overlapping objects. However, this time I permitted overlaps where one object was entirely contained within another. This strategy was ineffective. The number of objects varied widely between attempts, objects were placed too closely together, and the resulting hierarchies were shallow. So, instead, I created a generator that directly created a tree-like structure.
 
-The generator starts with a root object that encloses the whole image, then it selects an area inside with a random offset to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. It is also possible to customize the maximum depth, the minimum size of an object, minimum spacing, and children count. Some examples of this new generation are shown in Figure \ref{fig:env7}
+The generator begins with a root object that spans the entire image. It then selects an internal region with a random offset relative to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. The maximum depth, the minimum size of an object, the minimum spacing, and the number of children are customizable. Examples of this hierarchical structure are shown in Figure \ref{fig:env7}.
 
 \begin{figure}
     \centering
@@ -640,33 +643,33 @@ The generator starts with a root object that encloses the whole image, then it s
     \label{fig:env7}
 \end{figure}
 
-A new reward function was needed as well. I came up with the following method. First, find all objects the guess intersects with or fully encloses; if none exist, include objects that fully enclose the guess (there will always be at least the root). If there is just one such object, the reward is the IoU of this object with the guess minus the percentage of its area occupied by its children that have not been guessed yet (this is to discourage selecting objects that still have children). This object is then removed (including all of its children). If multiple intersecting objects exist, the one deepest in the hierarchy is chosen, and the same calculation is performed. The episode ends when the root object is removed.
+First, identify all objects that the predicted bounding box either intersects or fully contains. If none are found, include any object that fully contains the prediction (at minimum, this will always be the root object). If only one such object exists, the reward is calculated as the IoU between the predicted box and the object, minus the percentage of the object’s area that is occupied by unguessed child objects. The selected object, along with all its descendants, is then removed from the environment. If multiple intersecting objects exist, the one deepest in the hierarchy is chosen, and the same calculation is performed. The episode terminates when the root object has been removed.
 
-I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After around 7 million time steps, they both managed to get an average reward of about 2. The transferred model performed slightly better, but not by much. From the testing, it was clear that the model learned that placing long bounding boxes of zero width would almost always result in a nonnegative reward. The model did not explore enough to realize it could do much better.
+I tested this new environment by training two new models. One from scratch and the other transferred from the previous environment. After 7 million time steps, both models achieved an average reward of around 2. A model transferred from the previous environment performed better, but not by much, reaching at most 2.4. From the testing, it was clear that the model learned that placing long bounding boxes of zero width would almost always result in a nonnegative reward. The model failed to explore sufficiently and did not discover more optimal strategies.
 
 \subsection{Manual hyperparameter tuning}
 
-One thing I have not yet experimented with was hyperparameter tuning. This was a perfect opportunity since I needed to encourage the model to explore more. I manually tried changing each of the following parameters:
+Until this point, I had not experimented with hyperparameters. Since I needed to encourage exploration, this seemed like a good opportunity. I manually experimented with the following parameters:
 
 \begin{itemize}
-    \item The discount factor $\gamma$ (described in Section \ref{sec:goal}) -- By default, this parameter is set to 0.99, but in our case, discounting does not make sense. Because of how the environment works, the maximum number of steps for the episode is capped, and an ideal policy will use up all of them. Thus, discounting is unnecessary, and $\gamma$ should be set to 1.
+    \item The discount factor $\gamma$ (described in Section \ref{sec:goal}) -- By default, this parameter is set to 0.99. Given the environment’s design, each episode has a fixed maximum number of steps, and an optimal policy is expected to utilize all available steps. Thus, discounting is unnecessary, and $\gamma$ should be set to 1.
     \item Entropy loss coefficient $c_2$ -- The PPO loss function contains an entropy bonus that rewards less deterministic policies. Increasing it should thus lead to a more stochastic model and more exploration~\cite{PPO_paper}. By default, this hyperparameter is set to 0.
     \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents large updates to the policy and value function, which should prevent it from \enquote{jumping off a cliff}~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
     \item Learning rate $\varepsilon$ -- When updating the policy network, the gradient is multiplied by the learning rate. A higher learning rate should make the training faster, but at the same time, the jumps are more significant, which can lead to unstable learning.
 \end{itemize}
 
-I tried both lowering and increasing each of these parameters, but unfortunately, none of the changes had a more significant positive impact. Lowering $\gamma$ and increasing the clip range led to slightly better results, but only a little. Looking back at these attempts, I believe the problem was that I did not understand how the parameters should be changed, so I chose some values that looked good without any more sophisticated strategy.
+I experimented with both increasing and decreasing each of these parameters; however, none produced a substantial improvement in performance. In retrospect, the limited effectiveness of these changes may have been due to a lack of reason when selecting how much to change the parameters.
 
-Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that did not lead to much progress. Since I did not have many ideas for improving the training further, I decided to try a completely different approach.
+Later, when I discovered Optuna (see Section \ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that had minimal impact. With few remaining options for improving training performance, I opted to explore an entirely different approach.
 
 \section{Switching to discrete actions}
 \label{sec:iterative}
 
-Since the results of the previous approach, which guessed bounding boxes directly (one action = one prediction), did not work well, especially in a more complex environment, I wanted to try a different approach. In \cite{rl_object_detection}, Samiei and Li describe and compare two previously proposed approaches for object detection using reinforcement learning, both using a discrete action space. Both of these methods start with a bounding box spanning the entire image. Then, the agent chooses actions that modify this selection repeatedly. Once the model is satisfied with the prediction,  it selects the \texttt{trigger} action, confirming the selection (and ending the episode in case of a single object detection). The initial state is the entire searched image (scaled to some fixed size). After each action, the state is modified only to include the current selection.
+Since the results of the previous approach, where bounding boxes were predicted directly, with one action corresponding to one complete prediction, were unsatisfactory, particularly in more complex environments, I decided to try a different method. In \cite{rl_object_detection}, Samiei and Li describe and compare two previously proposed approaches for object detection using reinforcement learning, both using a discrete action space. Both of these methods start with a bounding box spanning the entire image. Then, the agent chooses actions that modify this selection repeatedly. Once the model is satisfied with the prediction, it selects the \texttt{trigger} action, which confirms the selection and ends the episode in the case of single-object detection. The initial observation includes the entire image (scaled to some fixed size). After each action, the observation is modified only to include the current selection.
 
-The first method, initially described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and the trigger action. It showed promising results on a single object, single-class object detection. However, it cannot be used since it only produces bounding boxes with the same aspect ratio as the image.
+The first method, initially described in~\cite{hierarchical_od_with_drl}, has five movement actions (each resulting in zooming towards one of the corners or the center of the image) and the trigger action. It showed promising results for single-object, single-class detection. However, it is unsuitable for this work because it only produces bounding boxes with the same aspect ratio as the image.
 
-The second method, initially described in~\cite{iterative_od_with_rl}, uses a similar approach. However, instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left, and right), two change the size (zoom in, zoom out) and two change the aspect-ratio (making the selection fatter or taller). These actions allow for way more flexibility, although some bounding boxes are still impossible because the changes are not continuous. However, if the size change is small enough, it should be fine, as we do not need pixel-perfect predictions. Figure \ref{fig:exmaple_from_paper} shows an example of one episode using this approach.
+The second method, initially described in~\cite{iterative_od_with_rl}, uses a similar approach. However, instead of five actions for zooming in different areas, it has a total of eight movement actions (plus the trigger), four of which move the bounding box (up, down, left, and right), two change the size (zoom in, zoom out) and two change the aspect-ratio (making the selection fatter or taller). These actions allow for way more flexibility, although some bounding boxes remain unreachable due to the discrete nature of the actions. However, if the step size is sufficiently small, this is acceptable, as pixel-perfect predictions are not required. Figure \ref{fig:exmaple_from_paper} shows an example of one episode using this approach from the original paper.
 
 \begin{figure}
     \centering
@@ -675,63 +678,63 @@ The second method, initially described in~\cite{iterative_od_with_rl}, uses a si
     \label{fig:exmaple_from_paper}
 \end{figure}
 
-As mentioned prior, the observation space is once again an image. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions, but~\cite{rl_object_detection} found that including them did not change the outcome.
+As previously described, the observation space is an image. The original paper~\cite{iterative_od_with_rl} also used a vector of ten previous one-hot encoded actions, but Samiei and Li found that excluding this vector did not change the outcome~\cite{rl_object_detection}.
 
-I implemented a simpler version of this approach with only four actions, each shrinking the bounding box by some fixed percentage from one of the four sides. This change simplifies the problem while keeping the ability to create predictions of any size.
+I implemented a simplified version of this approach using only four actions, each reducing the bounding box by a fixed percentage from one of its four sides. This simplification reduces complexity while preserving the ability to produce bounding boxes of arbitrary size.
 
-The suggested reward function compares the IoU of the selection before and after an action is taken and gives a reward of +1 if the action improved the guess and -1 if not. When the trigger action is selected, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$.
+The proposed reward function compares the IoU before and after an action. A reward of $+1$ is given if the action improves the IoU, and $-1$ otherwise. When the trigger action is selected, a reward of $\eta$ is given if the resulting IoU is over some threshold $\tau$, $-\eta$ otherwise. The suggested values are $\eta=3$, $\tau=0.5$.
 
-This reward function is suitable for single object detection. Unfortunately, when more than one object is present, it is difficult to determine whether the action improved the selection since it can differ for each object. For this reason, I started my experiment with a simpler semi-sparse reward function, which only rewards the trigger actions. The same calculation was used as in the continuous-action environment equivalents.
+This reward function is suitable for single-object detection. However, when more than one object is present, it is difficult to determine whether the action improved the selection since it can differ for each object. For this reason, I started my experiment with a simpler semi-sparse reward function, which only rewards the trigger actions. The same calculation was used as in the corresponding continuous-action environments.
 
 \section{Single randomly placed rectangle with discrete actions}
 
-To test this new approach, I modified the environment described in Section \ref{sec:moving_rectangle}, which contains just a single rectangle. The model learned to find the rectangle quickly, but the accuracy was not great, mainly because the selection shrinking was too large (one step shrunk the bounding box by 15 percent). The accuracy improved when I lowered it to just 5 percent, but it took way too many steps per episode (around 60), which could slow down the inference.
+To test this new approach, I modified the environment described in Section \ref{sec:moving_rectangle}, which contains only a single rectangle. The model learned to locate the rectangle, but the accuracy was suboptimal (IoU of 0.4), primarily because the selection reduction was too large (one step reduced the bounding box by 15 percent). The accuracy improved (IoU of 0.7) when the step size was reduced to 5 percent. However, it took on average 60 time steps to locate the object, which would slow down the inference later.
 
-Compared to the previous approach in the same environment, the training did take around ten times as many time steps to get to the same reward, but this is to be expected since suddenly a single guess required 30 to 50 time steps instead of just one.
+Compared to the previous approach in the same environment, training required approximately ten times more time steps to reach the same reward. This increase is expected, as a single prediction now required 30 to 50 steps instead of one.
 
 \section{Multiple rectangles with discrete actions}
 
-Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to use discrete actions. To account for the problematic accuracy caused by large steps shown in the previous environment, I implemented two actions per direction, one shrinking the bounding box by 15 percent and one by just 2.5 percent. This change does make the task slightly more complex, but at the same time, allows for precise predictions with a lower number of steps.
+Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section \ref{sec:multi-rect} to use discrete actions. To address the accuracy issues caused by large step sizes in the previous environment, I implemented two actions per direction: one that reduced the bounding box by 15 percent and another by 2.5 percent. Although this change slightly increases the task complexity, it enables more precise predictions using fewer steps.
 
-This is the environment where, with the previous approach, I had to switch to the bigger network. This time, I went directly with the ResNet-18-based network. This combination worked well, reaching the same reward of 2.1 in only around 700,000 time steps compared to the 10,000,000 with the previous approach, even though one episode took around 80 time steps compared to 3.5.
+This is the environment in which, under the previous approach, I had to switch to a larger network architecture. This time, I started with the ResNet-18-based network. This configuration performed well, achieving a reward of 2.1 in approximately 700,000 time steps, significantly fewer than the 10,000,000 required by the previous approach, even though each episode took around 80 time steps compared to just 3.5 previously.
 
 \section{Hierarchical environment with discrete actions}
 
-Seeing the success of the new approach, I decided to skip to the hierarchical environment described in Section \ref{sec:hierarchical-env}, which I could not solve using continuous actions.
+Given the success of the new approach, I proceeded to test it on the hierarchical environment described in Section \ref{sec:hierarchical-env}, which I had previously been unable to solve using continuous actions.
 
 \subsection{Changing to dense reward function}
 
-Unfortunately, the new approach did not help. The agent struggled even to reach positive rewards. I decided to try and get my reward function closer to the one described in~\cite{iterative_od_with_rl}. The main change was going from a semi-sparse function (only giving rewards for trigger actions) to a dense function (rewarding every action).
+Unfortunately, this new approach did not lead to improved performance. The agent struggled even to reach positive rewards. I decided to modify the reward function to more closely align with the one described in~\cite{iterative_od_with_rl}. The primary modification involved changing from a semi-sparse reward function, which only provided feedback for trigger actions, to a dense reward function that assigned rewards for every action.
 
-I came up with the following. After each interaction, find all leaf elements (with no children) that overlap with the current selection. If there are none, reward zero. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU is over 0.5, reward 3, else -3. In both cases, remove the element. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference. The episode ends once all nodes are removed.
+I devised the following reward function. After each interaction, find all leaf elements (with no children) that overlap with the current selection. If no such elements are found, a reward of zero is given. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU exceeds 0.5, a reward of 3 is given; otherwise, a reward of -3 is assigned. In both cases, the element is removed from the observation. If it is not the trigger action, compare the IoU with the IoU after the previous action and reward the difference. The episode ends once all nodes are removed.
 
-After some experimenting, I changed the reward function for the trigger action not to give a fixed constant value but instead to award 3 times the selection IoU, since otherwise there would be no incentive to exceed the threshold IoU of 0.5.
+After further experimentation, I modified the trigger action reward to scale with the IoU, awarding three times the IoU value. This change was made to encourage the agent to surpass the threshold IoU of 0.5, which a fixed reward failed to incentivize.
 
 \subsection{Automated hyperparameter tuning}
 
 Since I was not seeing much progress, I decided to revisit hyperparameter tuning, but this time using Optuna (see Section \ref{sec:optuna}).
 
-I ran a study of 200 trials, each running 200,000 time steps (if not pruned). The tuning took around 24 hours, although the final best hyperparameters were found in trial 23 after only 3 hours. According to this study, the most important hyperparameter was the learning rate. Optuna found that using about a tenth of the default learning rate with linear decay made quite a significant difference.
+I ran a study of 200 trials, each running 200,000 time steps (unless terminated earlier due to pruning). The entire tuning process spanned approximately 24 hours. However, the optimal hyperparameters were identified in trial 23 within the first 3 hours. According to this study, the most important hyperparameter was the learning rate. Reducing the default learning rate to approximately one-tenth, combined with linear decay, yielded a notable improvement in performance.
 
-The new reward function and hyperparameters brought the average episode reward from barely over zero to over twelve in less than one million training time steps. Since the current environment generated, on average, 3.9 objects, and the maximum reward per object was 4 (1 for shrinking actions, 3 for the trigger actions), this result meant an average IoU of over 0.75.
+The new reward function and hyperparameters brought the average episode reward from barely over zero to over twelve in less than one million training time steps. Given that the environment generated an average of 3.9 objects per episode, and the maximum attainable reward per object was 4 (1 from shrinking actions and 3 from the trigger), this outcome corresponds to an average IoU exceeding 0.75.
 
-After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20 or an IoU of almost 0.8 per object. This result showed me that the approach with discrete actions scaled well even with more objects.
+After increasing the average amount of objects per image to 6.3 and another two days of hyperparameter tuning, the reward got to over 20, or an IoU of almost 0.8 per object. These results demonstrated that the discrete-action approach scales effectively with increasing object counts.
 
-Interestingly, one of the tunable parameters was the size of the actor and critic networks. In both of the tunings, this parameter was deemed as very unimportant. In that later one, the best result was achieved using the smallest architecture of only one layer of 64 neurons. Because of this result, I reverted to the simple \texttt{CnnPolicy} provided by SB3.
+Interestingly, one of the tunable parameters was the size of the actor and critic networks. In both tuning experiments, this parameter was found to have minimal impact on performance. In that second one, the best result was achieved using the smallest architecture, where, apart from the shared feature extractor, both the actor and the critic consisted of only one layer of 64 neurons. This result prompted me to revert to the simple \texttt{CnnPolicy} provided by SB3.
 
 \section{Rectangles based on a website screenshot}
 %v8 env%
 
-Now that I could train a model that correctly finds elements in a hierarchical environment, the next step was to move to more realistic data. Instead of generating rectangles in random places, I wanted them to reflect real websites.
+Having successfully trained a model to detect elements in a hierarchical environment, I proceeded to experiment with more realistic data. Rather than placing rectangles at random, I aimed to base them on the structure of real websites.
 
 \subsection{Dataset}
 \label{subsec:dataset}
 
-Ideally, I would like to find a dataset containing screenshots of websites and annotations of elements on that screenshot. Such datasets exist, for example, \cite{roboflow-dataset-1} and \cite{roboflow-dataset-2}. Unfortunately, they are usually small (at most a bit over 1,000 images), contain just the \enquote{leaf} elements (not bigger sections such as spans or divs), and often contain straight-up wrong or duplicate annotations. After all, this thesis aims to train a DL-based model that does not need such a dataset precisely for these reasons.
+Ideally, I aimed to find a dataset containing website screenshots with corresponding element annotations. Such datasets do exist, for example, those presented in~\cite{roboflow-dataset-1, roboflow-dataset-2}. Unfortunately, they are small (at most a bit over 1,000 images), contain only the \enquote{leaf} elements (i.e., the smallest visual components), and exclude larger structural sections such as spans or divs, and often contain straight-up wrong or duplicate annotations. This limitation reinforces the motivation for this thesis, which aims to train a DL-based model without relying on such annotated datasets.
 
-Instead, I chose to use a dataset that contains just the screenshots and then somehow find the approximate locations of the elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains 20,000 website screenshots split into four categories: machinery, music, sport, and tourism (the original purpose of the dataset is to classify these categories). It offers the screenshots in two sizes, $224\times224$ pixels (too small for our use case) and $1440\times900$ pixels.
+Instead, I chose to use a dataset that contains just the screenshots and then estimate the approximate locations of elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains 20,000 website screenshots split into four categories: machinery, music, sport, and tourism (the original purpose of the dataset is to classify these categories). It provides screenshots in two resolutions: $224\times224$ pixels (which are too small for this application) and $1440\times900$ pixels.
 
-For each image, I then find the elements using the following method. First, convert the image to grayscale and apply a bilateral filter (which helps to eliminate textured backgrounds that would mess up edge detection). Next, locate edges using the Canny edge detection algorithm, and connect close ones using morphological closing. Lastly, find connected components and filter out those that are too small. Then, create a new black image the same size as the original screenshot and add white rectangles corresponding to the found objects. The result is similar to what we generated in the last environment, but based on an actual website. Since the original image is not given to the model, it is not a problem if we fail to detect some objects. The individual steps are shown in Figure \ref{fig:simple-detector}.
+For each image, I identified the elements using the following method. First, convert the image to grayscale and apply a bilateral filter, which reduces the impact of textured backgrounds that could interfere with edge detection. Next, locate edges using the Canny edge detection algorithm, and connect close ones using morphological closing. Finally, connected components are identified, and those below a minimum size threshold are discarded. A new black image of the same dimensions as the original screenshot is created, and white rectangles corresponding to the detected objects are overlaid. The result is similar to what we generated in the last environment, but based on an actual website. Since the original image is not provided to the model, occasional missed detections do not pose a significant issue. The individual steps are shown in Figure \ref{fig:simple-detector}.
 
 \begin{figure}
     \centering
@@ -740,7 +743,7 @@ For each image, I then find the elements using the following method. First, conv
     \label{fig:simple-detector}
 \end{figure}
 
-I could locate an average of 26 objects per image using this method. If we aim for an IoU of 0.7 with the current reward function, the goal for this environment should be a reward of around 72 per episode. A few examples of the initial states are shown in Figure \ref{fig:env8}.
+Using this method, an average of 26 objects per image was detected. Assuming a target IoU of 0.7 under the current reward function, the expected reward for this environment is approximately 72 per episode. A few examples of the initial states are shown in Figure \ref{fig:env8}.
 
 \begin{figure}
     \centering
@@ -751,43 +754,43 @@ I could locate an average of 26 objects per image using this method. If we aim f
 
 \subsection{Reward function}
 
-At first, I reused the same reward function as in the last environment. There, with less than 10 objects, it worked reasonably well. However, with over 20, the agent was again unable to understand the environment. The resulting model repeatedly placed large predictions until the episode ended.
+At first, I reused the reward function from the previous environment. In that setting, with fewer than 10 objects, the function performed reasonably well. However, when the number of objects exceeded 20, the agent failed to learn effective behavior. The resulting model repeatedly placed large predictions until the episode terminated.
 
-To combat this, I changed the logic to involve not only leaf objects. If the first prediction was large and had the best IoU with the root element, the episode would end instantly. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards. The selection would worsen until it became small enough to have better IoU with another element. This might confuse the agent, so I added another condition that removed the root element from these calculations unless it was the last remaining one.
+To address this, I modified the logic to consider not only leaf objects. If the initial prediction was large and achieved the highest IoU with the root element, the episode was terminated immediately. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards. The selection would worsen until it became small enough to have a better IoU with another element. To mitigate potential confusion caused by consistently negative rewards, I added a condition that excluded the root element from calculations unless it was the only remaining object.
 
-After this change, I reached an average reward of around 20 per episode.
+Following this modification, the model achieved an average reward of approximately 20 per episode.
 
 \subsection{Curriculum learning}
 
-Curriculum learning is a technique where the agent is trained on data of increasing difficulty. Since I was still the one creating the states, this would be relatively easy to do. I would only add the $n$ biggest bounding boxes when making the image. At the start, I set $n=3$. I then started saving the given rewards into an array, and once 100 of them were collected, I would calculate the average, and if it were over some threshold (I started with 0.7), I would increase $n$ by one.
+Curriculum learning is a technique where the agent is trained on data of increasing difficulty. Since the states were still generated manually, implementing this strategy was relatively straightforward. Initially, only the $n$ largest bounding boxes were included during image generation. At the start, I set $n=3$. I stored the rewards in an array, and once 100 values were collected, I computed their average. If the average exceeded a predefined threshold (initially set to 0.7), I incremented $n$ by one.
 
-After running this environment for 20,000,000 time steps, the agent beat the previous training by about 5. However, more importantly, the reward did not plateau and kept increasing even after such long training.
+After 20,000,000 training steps in this environment, the agent outperformed its previous mean reward per episode by 5. More importantly, the reward continued to increase even after prolonged training, indicating sustained learning progress.
 
-Later on, I found some more errors in the environment. Namely, since the reward for non-trigger actions was calculated as a difference between the current best IoU and the last best IoU, it did not work well on the first action after a trigger action.
-Another interesting issue was image scaling. Since the RL algorithms require the same-sized input every time, it was necessary to scale the selection to the state size. The problem is that based on the interpolation method used when scaling, some thin lines could disappear, making them invisible to the agent. Especially problematic was that this scaling could be both up-scaling and down-scaling or even both, one for each axis. Ultimately, I solved this by scaling separately for each axis and choosing a different interpolation method based on the situation.
+Subsequently, I identified additional issues in the environment. Specifically, the reward for non-trigger actions, calculated as the difference between the current best IoU and the previous best IoU, was ineffective when applied immediately after a trigger action.
+Another notable issue concerned image scaling. Since the RL algorithms require the same-sized input every time, it was necessary to scale the selection to the state size. The problem is that, based on the interpolation method used when scaling, some lines could be lost during interpolation, rendering them undetectable to the agent. Especially problematic was that this scaling could be both up-scaling and down-scaling, or even both, one for each axis. This issue was resolved by applying independent scaling for each axis and selecting the interpolation method adaptively based on the situation.
 
-After fixing these issues, the agent reached an average reward of 55 per episode.
+After addressing these issues, the agent achieved an average reward of 55 per episode.
 
 \subsection{Tolerant Intersection over Union}
 \label{subsec:eval_metric}
 
-Until this point, I was using the IoU metric to evaluate the goodness of a selection. It is the standard for bounding box prediction evaluation compared to the ground truth. It works well in classic object detection tasks where most objects are of a similar size. However, that is not the case in this problem. Some objects can take up most of the image, while others can take up less than 0.01 percent of the screen area.
+Up to this point, I used the Intersection over Union (IoU) metric to evaluate the quality of a bounding box selection. IoU is the standard metric for evaluating predicted bounding boxes against ground truth annotations. It performs effectively in conventional object detection tasks where objects are generally of similar size. However, this assumption does not hold in the current setting. Some objects can take up most of the image, while others can take up less than 0.01 percent of the screen area.
 
-IoU calculates relative errors. This behavior does not reflect my end goal. I care more about absolute differences than relative ones. An error of 2 pixels on a small element is usually not a problem, even though it is a lot relative to its size. An error of 50 pixels is a problem even for a large element, even though it is not much relative to its size. For this reason, I wanted to experiment with other metrics that could better reflect my requirements.
+Because IoU reflects relative error, it does not align well with the objectives of this work. The task prioritizes absolute differences in bounding box positions and sizes over relative errors. For instance, a 2-pixel deviation on a small element is acceptable, despite its high relative error. Conversely, a 50-pixel error on a large element is problematic, even if it constitutes a small relative discrepancy. For this reason, I wanted to experiment with other metrics that could better reflect my requirements.
 
-Since the agent currently only receives the zoomed-in view of the image, using a metric that is not purely relative would break the Markov property. The model cannot know if it is zoomed in a lot on a small object or zoomed in a little on a large object. To fix this problem, I expanded the observation space also to include the coordinates of the current view window. This meant changing the observation space to the \texttt{Dict} Gymnasium type and creating a new feature extractor. The entire architecture of this new network is shown in Figure \ref{fig:multiinput_arch} in the Appendix.
+Since the agent receives only a zoomed-in view of the image, introducing a metric that depends on the selection’s size would violate the Markov property. The model cannot distinguish whether it is highly zoomed in on a small object or minimally zoomed in on a large one. To address this limitation, the observation space was expanded to include the coordinates of the current view window. This required transitioning to the \texttt{Dict} observation type in Gymnasium and implementing a new feature extractor. The complete architecture of the modified network is illustrated in Figure \ref{fig:multiinput_arch} in the Appendix.
 
-This change sped up the training significantly, reaching a stable evaluation score of 60 in less than a third of the time steps and eventually reaching a score of over 70. This difference was somewhat surprising to me since, with IoU, this information should not be necessary.
+This modification alone led to a substantial acceleration in training, achieving a stable mean episode reward of 60 in less than one-third the number of time steps and eventually reaching a mean episode reward of over 70, even though it should not be needed with regular IoU.
 
-The first metric I came up with is Tolerant Intersection over Union. It has an extra tolerance parameter. Before the IoU calculation, the edges of the two bounding boxes are moved closer together by, at most, this (absolute, not relative) tolerance value. The result is a weighted sum of the IoU of the original bounding boxes and the modified ones to still slightly prefer a perfect match.
+The first alternative metric I created is Tolerant Intersection over Union (TIoU). This metric introduces an additional tolerance parameter. Prior to computing the IoU, the edges of the two bounding boxes are moved closer together by up to the specified tolerance value (defined in absolute terms). The final score is computed as a weighted sum of the IoU of the original and adjusted bounding boxes, maintaining a preference for precise matches.
 
-This new metric solved the issue of small bounding boxes being very sensitive, reducing the average episode length by almost a hundred time steps to around 750. On the other hand, it did not improve the bad selections of large bounding boxes, which makes sense because the metric can never produce a worse score than regular IoU.
+This new metric mitigated the sensitivity of small bounding boxes to minor errors, resulting in a reduction of average episode length by nearly 100 steps, to approximately 750. However, it did not improve inaccurate selections involving large bounding boxes, because the metric can never produce a worse score than regular IoU.
 
 \subsection{Absolute Sigmoid Score metric}
 
-Since the Tolerant IoU metric still performed poorly on large bounding boxes, I wanted to construct a metric that would rely solely on the absolute differences between the bounding boxes and not consider their size.
+Since the Tolerant IoU metric did not solve the issues with large bounding boxes, I aimed to construct a metric based solely on absolute differences, independent of box size.
 
-The Absolute Sigmoid Score metric computes the differences between the minimum $x$ and $y$ coordinates of the two boxes, the maximum $x$ and $y$ coordinates, and the $x$ and $y$ coordinates of their centers. The sum of these differences (marked as $\text{Diff}( b_1, b_2)$ in the formula below) is then passed through a descending sigmoid function. The sigmoid binds the result to the $[0,1]$ interval and captures the intuition that minor differences should be penalized less. The sigmoid function has two parameters, $\alpha$, which controls the steepness of the sigmoid, and $\theta$, which shifts the sigmoid (I used values $\alpha = 2.8$ and $\theta = 0.5$). To ensure that a perfect match always yields a score of one (regardless of $\alpha$ and $\theta$), the result is divided by the value of the sigmoid at a difference of zero.
+The Absolute Sigmoid Score metric computes the differences between the minimum $x$ and $y$ coordinates of the two boxes, the maximum $x$ and $y$ coordinates, and the $x$ and $y$ coordinates of their centers. The sum of these differences (marked as $\text{Diff}( b_1, b_2)$ in the formula below) is then passed through a sigmoid function with a descending shape, achieved by subtracting it from one. The sigmoid constrains the result to the $[0,1]$ interval and reflects the intuition that smaller differences should be penalized less. The sigmoid function has two parameters, $\alpha$, which controls the steepness of the sigmoid, and $\theta$, which shifts the sigmoid (I used values $\alpha = 2.8$ and $\theta = 0.5$). To ensure that a perfect match always yields a score of one, regardless of $\alpha$ and $\theta$, the result is divided by the value of the sigmoid at a difference of zero.
 
 \begin{equation}
 \begin{split}
@@ -796,20 +799,20 @@ The Absolute Sigmoid Score metric computes the differences between the minimum $
 \end{split}
 \end{equation}
 
-I struggled to find a suitable threshold of where to consider the score good enough to increase the difficulty of the curriculum learning. 0.85 was way too low, and the model's predictions were bad; 0.9 was too high, and the model did not progress. It is possible that with different parameters of $\alpha$ and $\theta$, this metric could be suitable. Nevertheless, for the rest of the experiments, I returned to TIoU.
+I struggled to find a suitable threshold at which the score could be considered good enough to increase the difficulty of the curriculum learning. 0.85 was too low, resulting in a model with inaccurate predictions; 0.9 was too high, and the model did not progress. It is possible that with different values of $\alpha$ and $\theta$, this metric might be suitable. Nevertheless, for the rest of the experiments, I returned to TIoU.
 
 \subsection{Selection padding}
 
-One potential issue I noticed when debugging the environment was that the agent sees only the current selection. Since the objects are only represented by their outline, the agent can no longer see one of the object's edges if it overshoots while shrinking the selection. Since the agent is memoryless, this could be an issue. I solved this by expanding the observation by a fixed percentage on each side to include some extra area around the selection.
+One potential issue I noticed when debugging the environment was that the agent observes only the current selection. Since the objects are only represented by their outline, the agent can no longer see one of the object's edges if it overshoots while shrinking the selection. Given that the agent has no memory, this limitation could pose a challenge. I addressed this by enlarging the observation window by a fixed percentage on each side to include some extra area around the selection.
 
-While the final result after 20 million training time steps was almost identical (stable evaluation score of around 80 per episode), it did learn faster, especially at the beginning.
+Although the final performance after 20 million training steps was nearly identical (stable mean episode reward of around 80 per episode), it did learn faster, especially at the beginning.
 
 \section{Finding objects in a real image}
 %v9 env%
 
-The previous environment has shown that it is possible to train a model that can find objects even in relatively complex hierarchies. However, it was still locating only rectangles in a heavily preprocessed image. This preprocessing required finding all the objects first using a different method, making the actual model somewhat pointless. The next step was creating an environment with only a simple image preprocessing that does not require knowing the locations of all the objects. It takes an image of a website, locates edges, and inflates them using morphological dilation. Figure \ref{fig:env9} shows some examples of the state the model receives.
+The previous environment showed that it is possible to train a model capable of finding objects even in relatively complex hierarchies. However, it was still locating only rectangles in a heavily preprocessed image. This preprocessing required detecting all objects in advance using a separate method, thereby diminishing the practical value of the model. The next step was to create an environment with only minimal image preprocessing that does not require prior knowledge of object locations. The environment processes a website screenshot by detecting edges and expanding them using morphological dilation. Figure \ref{fig:env9} shows some examples of the state the model receives.
 
-Besides changing the observation, this environment was similar to the previous one. The reward was still calculated based on ground truth labels, but this time, I used a more advanced CV-based detector (described in Section \ref{sec:trad_cv_detector}) to make the reward function more accurate. This raised the average count of objects per image to 32.4, meaning that the maximum average reward per episode was 129.6, and the goal was to reach 90 per episode (TIoU of 0.7).
+Apart from the change in the observation space, this environment was similar to the previous one. The reward was still calculated based on ground truth labels. However, this time I used a more advanced CV-based detector (described in Section \ref{sec:trad_cv_detector}) to increase the reward function's accuracy. This increased the average number of detected objects per image to 32.4, implying an optimal mean episode reward of 129.6. The target reward was set at 90 per episode (corresponding to a TIoU of 0.7).
 
 \begin{figure}
     \centering
@@ -818,52 +821,62 @@ Besides changing the observation, this environment was similar to the previous o
     \label{fig:env9}
 \end{figure}
 
-When running a training in this environment, using the same set-up that solved the previous environment, the resulting agent reached a top score of around 46.
+When training in this environment using the same setup as before, the agent achieved a peak mean episode reward of 46.
 
-The first change I made was to how the scaling of the image was done. In the previous environments, the image was always binary. This was because the objects were marked by only a one-pixel outline, which would often nearly disappear when a significant downscaling was applied. Here, this was no longer the case. By allowing the use of all 256 possible pixel values, the model could get some extra information and allow it to see finer detail. This change brought the average episode reward from 46 to 53.
+The first modification involved changing the method used to scale the image. In the previous environments, the image was always binary. This was because the objects were marked by only a one-pixel-wide outline, which would nearly disappear when the image was significantly downscaled. Here, this was no longer the case. By preserving all 256 grayscale pixel values, the model gained access to richer visual information, enabling it to discern finer details. As a result of this change, the average episode reward increased from 46 to 53.
 
 \subsection{Changing the feature extractor}
 
-Back in Section \ref{sec:different_shaps}, we saw that changing the shapes of the located objects required a larger feature extractor. As a reminder, since changing the action space to being discrete, all the environments were solved using a network with a very simple, not pretrained feature extractor with only three convolutional layers. Since the score dropped significantly when more complex objects were introduced, a bigger extractor could help.
+As discussed in Section \ref{sec:different_shapes}, adapting to variations in object shapes necessitated a larger feature extractor. As a reminder, after switching to a discrete action space, all environments were solved using a network with a simple, non-pretrained feature extractor consisting of only three convolutional layers. Since the reward decreased significantly with the introduction of more complex objects, a larger feature extractor could offer improvements.
 
-When using the bigger network developed in Subsection \ref{subsec:arch_change} (modified to also take the selection's coordinates), the score increased from 53 to 62. Surprisingly, when trying the ResNet-based architecture (Subsection \ref{subsec:resnet}) the model quickly dropped to a score of zero and never recovered. TODO: try this training again because it is sus.
+When using the larger network developed in Subsection \ref{subsec:arch_change}, modified to incorporate the selection's coordinates, the mean episode reward increased from 53 to 62. In contrast, when using the ResNet-based architecture (Subsection \ref{subsec:resnet}), the model's performance rapidly deteriorated to a mean reward of zero and failed to recover during training. Based on a suggestion from ChatGPT, I experimented with an alternative pretrained feature extractor, SqueezeNet1.1. Compared to ResNet-18, it contains approximately one-tenth as many parameters while maintaining comparable performance \cite{torchvision2016}.
 
+Training with the SqueezeNet feature extractor yielded a mean episode reward of approximately 65 after 20 million time steps. Since the mean episode reward was still increasing, I extended the training for an additional 20 million time steps with the learning rate reduced by half. This resulted in a peak mean episode reward of 94 on the validation data. I believe that further hyperparameter tuning and extended training could yield even better results. However, since this single training run took over 33 hours, additional experimentation would be prohibitively time-consuming on my current hardware.
 
+\section{Further possible optimizations}
+\label{sec:further_optim}
+
+This section outlines additional optimizations that could improve the performance and usability of the RL-based agents.
+
+The current action design results in a slow detector, as each prediction typically requires dozens of individual actions. Adjusting the shrinkage percentage or introducing additional action types could significantly reduce the number of required steps. With the originally attempted continuous actions, a single step per object would be sufficient. A hybrid approach combining discrete and continuous actions, where the model selects both a direction and a shrinkage percentage, could also be effective. However, the SB3 library currently does not support mixed action spaces.
+
+Although the final environment does not rely on ground-truth labels to construct observations, it still depends on them for reward calculation. These labels do not need to be manually provided, as they are generated using a CV-based function. For real-world applications, a reward function that does not require ground-truth labels would be more practical.
+
+This thesis employed only the PPO algorithm for agent training, as it was deemed the most appropriate in Section \ref{sec:algo_choice}. However, other algorithms may offer improved performance.
+
+Finally, in tasks where ground-truth labels are available, reinforcement learning can serve an alternative role. The model is initially trained using supervised learning for efficiency, and then fine-tuned with reinforcement learning, either using a traditional reward function or by incorporating human feedback. For a system like AIVA, this approach could be particularly practical, as users could provide feedback following a test run. This technique is already widely adopted for the fine-tuning of large language models \cite{LLM-RLHF}.
 
 \chapter{Comparison with other methods}
+\label{ch:comparisons}
 
-In the previous chapter, I described the development of a GUI element detector trained using deep reinforcement learning. While this demonstrated that the RL-based approach is feasible, it did not assess whether it offers advantages over traditional methods. In this chapter, I present two prototype detectors based on conventional techniques and compare all three solutions across multiple criteria.
+In the previous chapter, I described the development of a GUI element detector trained using deep reinforcement learning. While this demonstrated the feasibility of the RL-based approach, it did not assess whether it provides any advantages over traditional methods. In this chapter, I present two prototype detectors based on conventional techniques and compare them to the RL-based approach across multiple criteria.
 
 \section{Traditional CV-based detector}
 \label{sec:trad_cv_detector}
 
-To create a detector based purely on traditional computer vision algorithms with no ML, I mainly combined techniques described in Section \ref{sec:traditionalCV} to improve my detector described in Subsection \ref{subsec:dataset}. It uses Canny edge detection followed by Suzuki-Abe contour tracking to find potential objects. These are then filtered based on multiple criteria to hopefully only end with actual objects. The entire algorithm is described in detail in the Appendix in Chapter \ref{ap:cv}. The implementation uses the OpenCV library\footnote{\url{https://opencv.org/}} for the image processing.
-
-The two most problematic element types I encountered in the implementation were text and raster images. Unlike other elements, text is not a single large area of pixels but instead many small elements for each letter. It can be challenging to distinguish between a letter contour and one of random noise. To minimize this issue, I used morphological dilation and merged close letters. While this helps, it also creates inconsistencies where large letters are an element each, while smaller ones are merged into a single element.
-
-Raster images are problematic because they contain many edges of irregular sizes, which are unimportant for the element detection. This is especially hard to eliminate when the website uses an image as a background and its edges interfere with the edges of actual elements.
+To create a detector based purely on traditional computer vision algorithms without the use of machine learning, I combined techniques described in Section~\ref{sec:traditionalCV} to improve the earlier detector described in Subsection~\ref{subsec:dataset}. The primary differences were the use of contour tracing and stricter object filtering. The entire algorithm is described in detail in Appendix~\ref{ap:cv}.
 
 \section{Supervised DL-based detector}
 
-The second common approach for object detection, especially for more complex images, is using deep convolutional neural networks capable of predicting a variable number of bounding boxes trained using supervised learning.
+A second common approach to object detection, particularly for more complex images, involves deep convolutional neural networks capable of predicting a variable number of bounding boxes trained using supervised learning.
 
-I chose not to implement such a model from scratch, since that alone would likely be enough for a thesis. Instead, I have opted for YOLOv8 \cite{yolov8_ultralytics}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com/}} in 2023. YOLOv8 is a collection of pre-trained models for various tasks and of multiple sizes (ranging from 2.7 to 99.1 million parameters) \cite{ultralytics-docs}. Specifically, I used the smallest object detection model \texttt{YOLOv8n}. Newer versions have been released since, but I do have some past experience with YOLOv8, and it has been confirmed to work with GUI elements \cite{GUI_YOLO_comparison}. 
+I chose not to implement such a model from scratch. Instead, I opted for YOLOv8 \cite{yolov8_ultralytics}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com/}} in 2023. YOLOv8 is a collection of pre-trained models for various tasks and of multiple sizes (ranging from 2.7 to 99.1 million parameters) \cite{ultralytics-docs}. Specifically, I used the smallest object detection model \texttt{YOLOv8n}. Although newer versions have since been released, I selected YOLOv8, since I have worked with it previously, and prior studies have demonstrated its effectiveness in detecting GUI elements \cite{GUI_YOLO_comparison}.
 
-The model is pretrained on the COCO dataset \cite{COCO} and must be fine-tuned for the specific purpose. As mentioned previously, datasets for my task are limited, so for this prototype, I decided to create my own dataset. To do so, I used my CV-based detector (see Section \ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset \cite{aydos2020}. Please note that this makes any accuracy comparisons between these two detectors completely invalid, since the YOLOv8 model is essentially learning to copy my current detector and can not thus produce better results. However, since all three compared detectors are prototypes, this should not matter. We can assume that if the model learns well with this mocked dataset, it would also learn similarly well with a real one.
+The model is pretrained on the COCO dataset \cite{COCO} and must be fine-tuned for the specific purpose. As mentioned previously, datasets for my task are limited, so for this prototype, I decided to create my own dataset. To do so, I used my CV-based detector (see Section \ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset \cite{aydos2020}. It is important to note that this renders any direct accuracy comparison between these two detectors invalid, since the YOLOv8 model is learning to copy the CV-based detector. However, given that all three detectors are prototypes, this limitation is acceptable for the purposes of this comparison. It can be reasonably assumed that if the model performs well on this mocked dataset, it would also generalize effectively when trained on a real annotated dataset.
 
-Fine-tuning the model is extremely simple. Using the Python Ultralytics API, an instance of the \texttt{YOLO} class is created with the path to a pretrained model. Next, the \texttt{train} method is called with the path to the dataset. Specifying the epoch count, early stopping criteria, initial learning rate, and some other hyperparameters is possible. However, the library calculates suitable values if not provided. Ultralytics also provides a command-line interface.
+Fine-tuning the model is straightforward. Using the Python Ultralytics API, an instance of the \texttt{YOLO} class is initialized with the path to a pretrained model. Next, the \texttt{train} method is called with the path to the dataset. The epoch count, early stopping criteria, initial learning rate, and other hyperparameters can be specified. However, if these parameters are not provided, the library automatically determines suitable defaults. Ultralytics also provides a command-line interface.
 
 \section{Challenges of comparing the detectors}
 
-Before comparing the three detectors, it is important to note that each is at a very different level of maturity. The RL and CV-based detectors were created by me with varying amounts of knowledge of each topic and varying amounts of time. The DL-based detector was created by professionals and only fine-tuned by me.
+Before comparing the three detectors, it is important to note that each is at a very different level of maturity. The RL and CV-based detectors were developed by me with differing levels of domain expertise and time investment. The DL-based detector was created by professionals and only fine-tuned by me.
 
-These prototypes should be sufficient to compare the used concepts and draw attention to their main benefits and problems. However, if one were to look for a specific detector to use in an application such as AIVA, more detailed comparisons should be done with specific existing detectors.
+These prototypes are sufficient to compare the underlying approaches and draw attention to their main benefits and problems. However, for practical deployment in systems such as AIVA, more detailed comparisons should be done with specific existing detectors.
 
 \section{Accuracy}
 
-In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this can be somewhat problematic as multiple correct answers might exist. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this reason and the reasons described in the previous section, I won't be including any numerical scores in this section.
+In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this is problematic due to the presence of multiple valid interpretations. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this and other reasons outlined in the previous section, no quantitative metrics are reported in this section.
 
-The traditional CV-based detector struggles mainly with text and images. The text grouping is often inconsistent, short words are filtered out, and text on a background of similar color is missed completely. An image as a whole is usually detected correctly, but if it contains objects with high contrast, they are often labeled as separate elements. Some of these problems are illustrated in Figure \ref{fig:cv-mistakes}.
+The traditional CV-based detector struggles primarily with detecting text and images. The text grouping is inconsistent, short words are filtered out, and text on a background of similar color is missed completely. While entire images are detected correctly, high-contrast internal content is misclassified as separate elements. Some of these problems are illustrated in Figure \ref{fig:cv-mistakes}.
 
 \begin{figure}
     \centering
@@ -872,9 +885,9 @@ The traditional CV-based detector struggles mainly with text and images. The tex
     \label{fig:cv-mistakes}
 \end{figure}
 
-On the other hand, the predictions match the outline of the element well; it is very rare that a prediction is too large or too small. Crucially, when a prediction is incorrect, it is possible to find out why it was or wasn't filtered out and modify the filter. The white-box nature is, in my opinion, the biggest advantage compared to the other detectors.
+As for the positives, the predictions match the outline of the element well; it does not happen that a prediction is too large or too small. Crucially, when a prediction is incorrect, the cause can be identified and addressed by adjusting the filtering parameters. The white-box nature is, in my opinion, the biggest advantage compared to the other detectors.
 
-Since the YOLO detector was trained on outputs from the CV-based detector, I was expecting it to perform worse and learn to also replicate its problems. Surprisingly, this was not the case. I believe this is because the wrong predictions of the CV detector are somewhat inconsistent, and I only trained the model for 100 epochs, so it probably did not have enough time to learn these hard-to-predict inconsistencies. Where the CV-based detector had more false negatives (missed elements), this one was more prone to false positives (guessing extra elements). It also quite often made predictions that were a bit too large or a bit too small on only one of the sides, which did not happen in the training data. These mistakes are shown in Figure \ref{fig:yolo-mistakes}.
+Despite being trained on data generated by the CV-based detector, the YOLO-based model ultimately outperformed it. This could be because it was trained only for 100 epochs and thus it did not have time to overfit. Whereas the CV-based detector produced more false negatives (missed elements), this one was more prone to false positives (guessing extra elements). Approximately five percent of the predictions were slightly oversized or undersized on a single edge, which did not happen in the training data. These mistakes are shown in Figure \ref{fig:yolo-mistakes}.
 
 \begin{figure}
     \centering
@@ -883,34 +896,60 @@ Since the YOLO detector was trained on outputs from the CV-based detector, I was
     \label{fig:yolo-mistakes}
 \end{figure}
 
-Since the final RL-based detector is mostly a proof of concept, its accuracy is not great. Figure \ref{fig:gov_predict_rl} shows its results on a simple website. While it clearly focuses on the correct areas, it very often undershoots or overshoots in some directions. I believe that with longer training or some more changes to the environment, actions, and reward function, these problems could be minimized.
+As the final RL-based detector serves primarily as a proof of concept, its accuracy is not comparable to the other two. Figure \ref{fig:gov_predict_rl} shows its results on a simple website. While it clearly focuses on the correct areas, the predictions have inaccurate sizes. Since areas of previous guesses are removed from the state, making a large selection can remove other elements and ruin the entire detection, which happened with around 25 percent of images. Overall, the approach shows potential, but a lot more work would have to be invested to make it match the results of the other two methods.
 
 \begin{figure}
     \centering
     \includegraphics[width=1\linewidth]{results/rl_pred_gov.jpg}
-    \caption{Predictions of the final RL-based model on a simple website.}
+    \caption{Predictions (marked in red) of the final RL-based model on a simple website.}
     \label{fig:gov_predict_rl}
 \end{figure}
 
 \section{Speed}
+\label{sec:speed}
 
-For real-time applications, the speed of a detector is crucial. During a single test, AIVA might localize the elements more than a hundred times, meaning it has a high effect on how long a test execution takes.
+For real-time applications, the speed of a detector is crucial. AIVA may run tens or even hundreds of detections when testing a website. Thus, the speed of the detector plays an important role.
 
-The prediction times on the YOLO-based detector were by far the fastest. The median prediction time was 12 ms on the GPU and 30 ms on the CPU. The time did depend on the number of objects detected, though the differences were small (11 ms for 20 objects, 15 ms for 80 objects). The very first prediction is a lot slower, taking around 1.5 s.
+The prediction times for the YOLO-based detector were by far the fastest. The median prediction time was 12 ms on the GPU and 30 ms on the CPU. The time depended on the number of objects detected, though the differences were small (11 ms for 20 objects, 15 ms for 80 objects). The first prediction was significantly slower, taking approximately 1.5 seconds.
 
-The CV-based detector was slower, with a median prediction time of 144 ms. Here, the object count played a bigger role (125 ms for 20 objects, 200 ms for 80 objects). On the other hand, the detector does not require any initialization, making the time to first prediction faster than that of the YOLO-based detector. If speed were the primary goal, it could definitely be optimized further. For example, the bilateral filter takes up over 46 percent of the runtime. Another 17 percent is used on thousands of operations with bounding boxes, many of which could likely be removed or calculated in a faster way.
+The CV-based detector was slower, with a median prediction time of 144 ms. Here, the object count played a bigger role (125 ms for 20 objects, 200 ms for 80 objects). However, it does not require any initialization, resulting in a shorter time to first prediction than the YOLO-based detector. If speed were the primary goal, it could be further optimized. For example, the bilateral filter takes up over 46 percent of the runtime. Another 17 percent is spent on thousands of operations involving bounding boxes, many of which could potentially be eliminated or computed more efficiently.
 
-The RL-based detector is slow. While each step of the model only takes a bit over 1 ms on the GPU (around 2 ms on the CPU), this approach also requires simulating the environment (around 0.5 ms per step) and, most crucially, every bounding box prediction requires anywhere from 20 to 40 steps. That means over 100 ms per bounding box and multiple seconds for the whole image.
+The RL-based detector is slower. While each step of the model only takes a bit over 1 ms on the GPU (around 2 ms on the CPU), this approach also requires simulating the environment (around 0.5 ms per step) and, most crucially, every bounding box prediction requires anywhere from 20 to 50 steps. This results in over 100 milliseconds per bounding box and several seconds for a complete image. Some possibilities of improving this are presented in Section \ref{sec:further_optim}.
 
-I believe there are ways to bring this time down. Modifying the shrink amounts or adding even more actions for different levels of shrinking could significantly reduce the step count. With the continuous actions attempted at the beginning, only a single step per object would be required. A combination of discrete and continuous actions, where the model would pick a direction and amount of shrinkage, could also work. Unfortunately, the SB3 library currently does not support mixed action spaces.
+%\begin{table}
+%    \centering
+%    \begin{tabular}{c|cc}
+%         & Time to first prediction & Next predictions \\
+%         \hline
+%         YOLO & 1500 ms &  12 ms \\
+%         CV & 144 ms &  144 ms \\
+%         RL& 2991 ms &  2048 ms \\
+%    \end{tabular}
+%    \caption{Caption}
+%    \label{tab:my_label}
+%\end{table}
 
 \section{Data requirements}
+\label{sec:data_req}
 
-Since one of the main motivations of using RL was that it could be less reliant on large quantities of data, I wanted to test how well it would compare to the YOLO based detector on smaller datasets. Both of the final models were trained on 8,000 images (I used only half of the 20,000 images in \cite{aydos2020} and left out 1,000 as validation data and 1,000 as testing data). I repeated the trainings on datasets of 1,000 images and 100 images.
+Since one of the main motivations for using RL was its potential to be less reliant on large quantities of data, I tested how it compared to the YOLO-based detector on smaller datasets. Both final models were trained on 8,000 images (using half of the 20,000 images from \cite{aydos2020}, with 1,000 reserved for validation and 1,000 for testing). I repeated the trainings on datasets of 1,000 images and 100 images.
 
-The RL models started training very similarly, after eight million time steps, they all had an evaluation score of around 38. After that, their improvement speed started to separate. After 20 million time steps, they were reaching stable evaluation scores of 65, 58, and 52, respectively. Looking at their performance on their training data showed scores of 25, 25, and 30 (remember that these are slowed down by the curriculum learning; more objects are added only once the model reaches an average TIoU of 0.7). This was a clear sign that the model with the smallest dataset was overfitting on the training data. The model with the middle dataset had bigger issues with generalization than the original one, but would likely still continue learning afterwards.
+The RL models began training with similar performance. After eight million time steps, they all reached a mean episode reward of approximately 38 on the validation data. After that, their improvement speed started to separate. After 20 million time steps, they were reaching stable episode rewards of 65, 59, and 50, respectively. Performance on the training data showed episode rewards of 25, 25, and 30, respectively. These values are lower due to the curriculum learning strategy, in which more objects are introduced only after the model reaches an average TIoU of 0.7. This clearly indicated that the model trained on the smallest dataset was overfitting to the training data. The model trained on the middle-sized dataset exhibited greater difficulties with generalization than the original, but its episode reward curve ended on an upward trend, suggesting it might continue improving with additional training. The exact values are shown in Table~\ref{tab:rl_results}.
 
-The three YOLO models were trained until they stopped improving. The values of evaluation metrics on the validation data are shown in Table \ref{tab:yolo_results}. Inspecting the results visually, the model with the middle dataset was performing quite similarly to the original model, except sometimes creating two almost identical predictions, and also being less tight around the objects. The model with the smallest dataset had similar issues, but they were much more common, appearing on almost every object.
+\begin{table}
+    \centering
+    \begin{tabular}{c|cccc}
+        Dataset size & Val. 8M & Train 8M & Val. 20M & Train 20M \\
+         \hline
+        8,000 & 35.42 & 11.13 & 64.89 & 25.02 \\
+        1,000 & 34.97 & 10.72 & 58.73 & 24.96 \\
+        100   & 35.91 & 13.91 & 50.36 & 30.15 \\
+    \end{tabular}
+    \caption{The mean episode rewards of the three agents after 8 million and 20 million time steps on the training and validation data. A higher validation reward is better.}
+    \label{tab:rl_results}
+\end{table}
+
+The three YOLO models were trained until they stopped improving (no improvement in evaluation metrics for 100 epochs). The values of evaluation metrics on the validation data are shown in Table \ref{tab:yolo_results}. Visual inspection showed that the model trained on the intermediate dataset performed similarly to the original, except that it often produced duplicate predictions for approximately 10 percent of elements and generated less precise bounding boxes. The model trained on the smallest dataset exhibited similar issues, but these occurred much more frequently, affecting nearly every detected object.
 
 \begin{table}
     \centering
@@ -921,24 +960,30 @@ The three YOLO models were trained until they stopped improving. The values of e
         1,000 & 0.648 & 0.655 & 0.660 & 0.503 \\
         100   & 0.642 & 0.562 & 0.557 & 0.380 \\
     \end{tabular}
-    \caption{The performance of YOLOv8n on different dataset sizes. In all metrics, higher is better.}
+    \caption{The performance metrics of YOLOv8n on different dataset sizes. In all metrics, higher is better.}
     \label{tab:yolo_results}
 \end{table}
 
-\section{Implementation difficulty}
-
-The final criterion I want to assess is the difficulty of implementing a detector using each approach. While this is very subjective, I believe it to be one of the most important for actual usage.
-
-Reinforcement learning is not usually used for element detection. Because of this, I had to implement most of the parts (environments, reward functions, networks) myself. There is also very little information available on reinforcement learning with image input. While some famous image-based environments exist (namely, Atari games and the OpenAI robot fetch), most RL environments, tutorials, and projects use much lower-dimensional observations. This meant a lot of experimenting, often with mixed results.
-
-However, supervised learning-based object detection is a very well-explored subject. Many datasets and ready-to-use models exist, along with tutorials on how to use them, and new papers and versions of these models are released regularly. Once I created the dataset, it took me under 3 hours, including training, to get the first decent YOLOv8 prototype. Of course, if one were to implement their model from scratch, it would take much longer, but I still believe it would be more straightforward than when using RL.
-
-With CV-based detectors, it is more complicated. From my experience, I can confirm that a person with basic image processing knowledge can create a CV-based detector that works well on simple GUIs within hours. But then again, making it work on more complex GUIs can take hours of tedious finding of ideal thresholds and parameters, only to find another case where the current setup fails. The most significant advantage here is that the whole algorithm is very transparent and debuggable, which makes fixing problems much more straightforward than with black-box machine learning.
-
-I believe that the most time-efficient way to implement an element detector would be to use existing ML-based models for detecting difficult-to-process elements (namely, an OCR for texts and a YOLO like model for images), then removing these parts from the image and using a CV-based detector for the rest.
-
 \chapter*{Conclusion}
-It sucks
+\markright{\textsc{Conclusion}}
+\addcontentsline{toc}{chapter}{Conclusion}
+This thesis experimentally investigated the feasibility of creating a graphical user interface element detector based on deep reinforcement learning. The goal was to explore an alternative to traditional methods that may require less data. The work included the implementation of ten reinforcement learning environments, some with both continuous and discrete action variants. Over 1,000 hours and approximately one billion time steps were spent training agents in these environments using various network architectures, reward functions, and other hyperparameters. An additional 200 hours were dedicated to automated hyperparameter tuning.
+
+The thesis concludes that while it is possible to train an agent for element detection purely via reinforcement learning, conventional methods are more efficient and produce more accurate and consistent results. The thesis also answers the following questions:
+
+\begin{enumerate}
+    \item Which of these three approaches seems to be the most suitable approach for creating a hybrid structural/semantic model for a web page in AIVA?
+
+    As shown in Chapter \ref{ch:comparisons}, both CV and DL produce satisfactory results in terms of speed and accuracy. Since sufficient datasets for training a purely DL-based detector are not currently available, I recommend using an existing OCR model to detect text, the main limitation of traditional CV, and applying traditional CV techniques for the remaining elements.
+
+    \item Are there any optimization methods that can be used to further improve the reliability of this approach?
+
+    Discussed in Section \ref{sec:further_optim}. Minor optimizations, such as adjustments to the reward function, hyperparameters, or action definitions, could be beneficial. Another possible optimization is to use RL only as a fine-tuning of an existing model based on human feedback.
+
+    \item What data (in volume and quality) should be gathered to create a sufficiently complex data set for successful use of this approach in the AIVA system?
+
+    As shown in Section \ref{sec:data_req}, the 8,000 images of web pages used for the experiments seemed to be sufficient, since training the same model on 1,000 images yielded similar results. For practical use, it would be beneficial to collect images of modern web applications, as the dataset used in this thesis did not accurately reflect current user interface design trends.
+\end{enumerate}
 
 \printbibliography[heading=bibintoc] %% Print the bibliography.
 
@@ -980,13 +1025,13 @@ This appendix contains diagrams of network architectures used in Chapter \ref{ch
 \chapter{CV detector algorithm}
 \label{ap:cv}
 
-This appendix describes in detail the algorithm used in the element detector based on traditional computer vision in Section \ref{sec:trad_cv_detector}. Note that the numerical parameter values mentioned in the text were tuned for images of size $1440\times900$ pixels. For images of a different size, some of them would have to be changed.
+This appendix describes in detail the algorithm used in the element detector based on traditional computer vision in Section \ref{sec:trad_cv_detector}. The numerical parameter values mentioned in this section were tuned for images with a resolution of $1440\times900$ pixels. For images of a different size, some of them would have to be changed. Image processing is performed using the OpenCV library\footnote{\url{https://opencv.org/}}.
 
 \section{Preprocessing}
 
 The algorithm receives a screenshot of a website as input. The first step in the pipeline is preprocessing, which turns the colored image into a binary image that only contains relevant contours.
 
-First, the image is converted from RGB to grayscale. This step is necessary since most image processing algorithms only work on single-channel images. Next, a bilateral filter is applied. Some websites use images or textures as a background, which are then falsely detected as edges. The bilateral filter helps smooth these textures out while not destroying actual edges. This difference can be seen in Figure \ref{fig:bilateral}. I found that $d=21$, $\sigma_s =10$, and $\sigma_r = 50$ worked the best.
+First, the image is converted from RGB to grayscale. This step is necessary because most image processing algorithms operate on single-channel images. Next, a bilateral filter is applied. Some websites use images or textures as backgrounds, which may be incorrectly detected as edges. The bilateral filter helps smooth these textures out while not destroying actual edges. This difference can be seen in Figure \ref{fig:bilateral}. The parameters $d=21$, $\sigma_s =10$, and $\sigma_r = 50$ produced the most consistent results.
 
 \begin{figure}
     \centering
@@ -995,11 +1040,11 @@ First, the image is converted from RGB to grayscale. This step is necessary sinc
     \label{fig:bilateral}
 \end{figure}
 
-Next, Canny edge detection is used to find edge pixels. I chose Canny in particular since it already implements edge thinning and thresholding. Choosing the thresholds was difficult, since low thresholds lead to noise being detected as edges, while high thresholds could be too strict (for example, filtering out text on a similarly colored background). I got the best results with $t_1=100$ and $t_2=200$.
+Next, Canny edge detection is used to find edge pixels. I chose Canny in particular since it already implements edge thinning and thresholding. Selecting appropriate thresholds posed challenges: low values increased noise detection, while high values risked omitting subtle features, such as text on a similarly colored background. I got the best results with $t_1=100$ and $t_2=200$.
 
-It would probably be better to do multiple passes of the algorithm with different thresholds for the edge detection (potentially even other steps). Filtering would be more strict with lower thresholds and less strict with higher thresholds. The results of these different passes would then be combined. But since this was supposed to be just a prototype, and finding the right combinations of thresholds and filters would be pretty time-consuming, I decided against it.
+A potentially more effective approach would involve applying the algorithm in multiple passes with varying thresholds. Filtering would be more strict with lower thresholds and less strict with higher thresholds. The results of these different passes would then be combined. However, as this implementation was intended as a prototype, and tuning the combinations of thresholds and filters would be time-intensive, this approach was not pursued.
 
-Next, the edges are expanded using morphological dilation with a circular kernel. This helps with two problems. First, sometimes the found edges are imperfect and contain holes; the dilation joins them back. Second, it merges letters of a text into a single blob. Deciding whether a contour is a letter or some noise would be complicated without this. This effect is shown in Figure \ref{fig:dilation}.
+Next, the edges are expanded using morphological dilation with a circular kernel. This addresses two issues. First, it compensates for incomplete or fragmented edge detection. Second, it merges letters of a text into a single blob. Distinguishing between textual contours and noise would be significantly more challenging without this step. This effect is shown in Figure \ref{fig:dilation}.
 
 \begin{figure}
     \centering
@@ -1008,22 +1053,22 @@ Next, the edges are expanded using morphological dilation with a circular kernel
     \label{fig:dilation}
 \end{figure}
 
-Unfortunately, the dilation also sometimes joins together two separate elements. I try to somewhat mitigate this by removing one-pixel-wide connections (foreground pixels surrounded by foreground pixels in one direction but not in the other). I detect such pixels using a hit-and-miss transformation and remove them.
+Unfortunately, the dilation also sometimes joins together two separate elements. This issue is mitigated by removing one-pixel-wide connections (foreground pixels surrounded by foreground pixels in one direction but not in the other), though this solution is not perfect. Such pixels are detected using a hit-and-miss transformation and removed.
 
-After these steps, the image is ready for contour tracing. For this, I use OpenCV's implementation of the Suzuki-Abe algorithm.
+Following these preprocessing steps, the image can be processed for contour tracing. This is accomplished using OpenCV's implementation of the Suzuki–Abe algorithm.
 
 \section{Contour filtering}
 
-After the described steps, we now know the locations and points of all contours in the preprocessed image. I first reconstruct the hierarchy of these contours. Note that OpenCV already returns a hierarchy, but it often contains errors. For example, a button with rounded corners frequently has holes in its edges. Because of this, a text inside the button is declared as a sibling contour instead of a child.
+After preprocessing, the locations and coordinates of all contours in the image are available. I first reconstruct the hierarchy of these contours. Although OpenCV provides a contour hierarchy, it frequently contains errors. For example, a button with rounded corners frequently has gaps in its edges. As a result, text inside a button may be incorrectly identified as a sibling contour rather than a child.
 
 To construct the tree, I first create a root contour that runs along the edge of the image and thus contains every other contour. I then sort the found contours in descending order based on the area of their axis-aligned bounding rectangle. Then, for each contour, I check whether its bounding rectangle is mostly within any of the root node's children, in which case I check through its children and repeat recursively. If not, it becomes a new child of the checked node.
 
-Then filtering is done. A contour is eliminated if at least one of the following is true. The filtering results are visible in Figure \ref{fig:filtering}.
+The next step is contour filtering. A contour is eliminated if at least one of the following is true. The filtering results are visible in Figure \ref{fig:filtering}. These rules were developed by analyzing false element predictions and identifying which attributes distinguished them from valid elements.
 
 \begin{enumerate}
-    \item Its bounding rectangle is too small (its height or width is less than 15 pixels, both are under 30 pixels).
-    \item Its parent is too small (a contour can only have children if it is at least $100 \times 100$ pixels).
-    \item It is too rotated (the angle of the enclosing rectangle with the smallest area is rotated by more than 10 degrees. This rule is not applied to contours of almost square aspect ratio).
+    \item Its bounding rectangle is too small (height or width less than 15 pixels, or both dimensions under 30 pixels).
+    \item Its parent is too small (only contours of at least $100 \times 100$ pixels may have children).
+    \item It is excessively rotated (i.e., the minimum-area enclosing rectangle is rotated by more than 10 degrees). This rule is not applied to contours with an approximately square aspect ratio.
     \item It is at least slightly rotated, and the area of its convex hull is notably smaller than that of its bounding rectangle (less than 75 percent).
     \item It is an inside contour (it encloses only background pixels).
 \end{enumerate}
@@ -1035,8 +1080,17 @@ Then filtering is done. A contour is eliminated if at least one of the following
     \label{fig:filtering}
 \end{figure}
 
-Lastly, we merge any two contours whose bounding rectangle intersects, but one is not entirely inside the other. The axis-aligned bounding boxes of these final contours are the algorithm's output.
+Finally, any two contours whose bounding rectangles intersect, without one being fully contained within the other, are merged. The axis-aligned bounding boxes of the filtered and merged contours constitute the final output of the algorithm.
+
+The most challenging element types for this implementation were text and raster images. Unlike other elements, text consists of many small contours corresponding to individual letters rather than a single contiguous region. Distinguishing between contours representing letters and those resulting from random noise can be difficult.
+
+Raster images are problematic due to the presence of numerous irregular and irrelevant edges that do not correspond to meaningful elements. This issue is particularly difficult to address when background images introduce edges that overlap or interfere with those of genuine UI elements.
 
 \chapter{List of digital appendices}
+
+\begin{enumerate}
+    \item \texttt{WebElementDetector.zip} -- An archive containing the implementations of the environments, the CV-based detector, and scripts for training, evaluating, benchmarking, and running all the detectors.
+    \item \texttt{Models.zip} -- An archive containing the best RL and YOLO models trained on the three sizes of datasets.
+\end{enumerate}
 
 \end{document}
