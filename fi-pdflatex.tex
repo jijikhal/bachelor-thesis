@@ -58,14 +58,14 @@
     advisor     = {RNDr. Ondřej Krajíček},
     title       = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
     TeXtitle    = {Experimenting with web-page structural analysis using Deep Reinforcement Learning},
-    keywords    = {deep reinforcement learning, user interface element detection, object detection, computer vision, PPO, YOLO},
-    TeXkeywords = {deep reinforcement learning, user interface element detection, object detection, computer vision, PPO, YOLO},
+    keywords    = {deep reinforcement learning, user interface element detection, object detection, computer vision, Stable-Baselines3, YOLO},
+    TeXkeywords = {deep reinforcement learning, user interface element detection, object detection, computer vision, Stable-Baselines3, YOLO},
     abstract    = {%
 
-    This thesis investigates the feasibility of using deep reinforcement learning for detecting graphical user interface elements in web application screenshots. To do so, ten reinforcement learning environments of increasing complexity are developed, and agents are trained in each using a variety of reward functions, network architectures, and hyperparameters until an agent capable of solving each environment is achieved. The performance of the resulting model is then compared with two prototypes developed using traditional approaches: traditional computer vision and deep supervised learning. The thesis concludes that, while training a model purely through reinforcement learning is feasible, it does not offer significant advantages for this particular problem.
+    This thesis investigated the feasibility of using deep reinforcement learning for the detection of graphical user interface elements in web application screenshots. Ten reinforcement learning environments of increasing complexity were developed, and agents were trained in each using various reward functions, network architectures, and hyperparameters until an agent capable of solving each environment was achieved. The performance of the resulting model was then compared with two prototypes developed using the conventional approaches: traditional computer vision and deep supervised learning. The thesis concludes that, while training a model purely through reinforcement learning is possible, it does not offer significant advantages for this particular problem.
     },
     thanks      = {
-    I would like to express my sincere gratitude to my supervisor, RNDr. Ondřej Krajíček, for his invaluable guidance, insightful feedback, and unwavering support throughout the development of this thesis. His mentorship was instrumental in shaping the direction and quality of my work.
+    I would like to express my sincere gratitude to my thesis supervisor, RNDr.~Ondřej~Krajíček, for his invaluable guidance, insightful feedback, and unwavering support throughout the development of this thesis.
 
     My heartfelt thanks also go to the entire YSoft AIVA team for fostering such a supportive and collaborative environment. Without them, I would not have the opportunity to investigate such an interesting topic.
     
@@ -86,7 +86,8 @@
 \usepackage{url}      %% Hyperlinks
 \usepackage{markdown} %% Lightweight markup
 \usepackage{listings} %% Source code highlighting
-\usepackage{svg}      %% SVG figures
+\usepackage{siunitx}
+\usepackage{booktabs}
 \lstset{
   basicstyle      = \ttfamily,
   identifierstyle = \color{black},
@@ -109,11 +110,11 @@
 \markright{\textsc{Introduction}}
 \addcontentsline{toc}{chapter}{Introduction}
 
-Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications solely based on visual information. In order to achieve this, they must reliably detect and localize interface elements in the captured image to infer the UI's hierarchical structure. This process is typically carried out using traditional computer vision algorithms or deep neural networks trained via supervised learning. The main focus is on finding the exact borders of the elements rather than, for example, classifying what types of elements are present.
+Certain graphical user interface (UI) testing tools, such as YSoft AIVA, interact with applications solely based on visual information. In order to achieve this, they must reliably detect and localize elements in the captured image to infer the UI's hierarchical structure. This process is typically carried out using traditional computer vision algorithms or deep neural networks trained via supervised learning. The main focus is on finding the exact borders of the elements rather than, for example, classifying what types of elements are present.
 
-This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting user interface elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize visual elements, ranging from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods.
+This thesis investigates the experimental use of reinforcement learning (RL) algorithms for detecting UI elements. First, a series of simulated environments with increasing complexity is created to model the problem. Next, agents are trained in these environments using various parameters and reward functions until they successfully learn to detect and localize objects, ranging from basic shapes to complete user interface components. This process results in an agent capable of accurately locating UI elements. Finally, the resulting approach is compared with traditional methods.
 
-The thesis concludes that while training an agent for UI element detection purely by RL is possible, it does not bring any sizable benefits over the currently used techniques, while being less accurate and harder to train.
+The thesis concludes that while training an agent for UI element detection purely by RL is possible, it does not bring any sizable benefits over the currently used techniques, while being less accurate and more difficult to train.
 
 The thesis is organized into five chapters. The first chapter provides a detailed overview of the problem, existing solutions, their limitations, and the rationale for using RL. The second chapter outlines the theoretical and mathematical foundations of RL. The third chapter discusses the libraries and tools used for agent development and training. Next, the fourth chapter presents the design of simulated environments, the experiments that were conducted, and the challenges encountered. Finally, in the fifth chapter, the proposed approach is compared with traditional methods.
 
@@ -128,42 +129,43 @@ This task can be addressed through either object detection or segmentation, as m
 \begin{figure}
     \centering
     \includegraphics[width=0.7\linewidth]{diagrams/result_example.pdf}
-    \caption{An example of a processed web page. The top image is the original screenshot, the middle image shows bounding boxes of detection, and the bottom image shows the same information but as a segmentation map. The original screenshot comes from~\cite{aydos2020}.}
+    \caption{An example of a processed web page. The top image shows the original screenshot, the middle image shows bounding boxes of detection, and the bottom image shows the same information but as a segmentation map. The original screenshot comes from~\cite{aydos2020}.}
     \label{fig:example-result}
 \end{figure}
 
 Graphical user interface (GUI) object detection is usually performed using traditional computer vision (CV) or using deep learning-based object detection models such as R-CNNs or YOLO. A combination is also possible, for example, using a deep learning (DL) model for text and image detection and CV for the rest~\cite{ODforGUI_CV_DL_or_both}. This chapter looks at both approaches, some existing solutions based upon them, and the challenges they present. Finally, a third approach that could solve these problems is proposed based on deep reinforcement learning.
 
+\raggedbottom
 \section{Traditional computer vision-based solutions}
 \label{sec:traditionalCV}
 
-In this thesis, the term \enquote{traditional computer vision} refers to digital image processing algorithms that do not use machine learning but operate directly on pixel data. Traditional CV is challenging to use for object detection in photographs due to noise and unclear edges. However, it is well-suited for processing user interfaces. Screenshots typically lack noise (aside from occasional compression artifacts) and contain clearly defined edges
+In this thesis, the term \enquote{traditional computer vision} refers to digital image processing algorithms that do not use machine learning but operate directly on the pixel data. Traditional CV is challenging to use for object detection in photographs due to noise and unclear edges. However, it is well-suited for processing user interfaces. Screenshots typically lack noise (aside from occasional compression artifacts) and contain clearly defined edges
 
-A common approach involves applying an edge detection method (e.g., Canny or Sobel), followed by post-processing steps to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The resulting edge data can be combined with outputs from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. This process is employed in algorithms such as REMAUI~\cite{remaui} (a tool for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
+A common approach involves applying an edge detection algorithm (e.g., Canny or Sobel), followed by post-processing steps to make the edges cleaner (e.g., morphological operations, filtering of small edges), and finally, detecting contours in the binary image. The resulting edge data can be combined with outputs from an optical character recognition (OCR) model and further processed to merge similar elements and filter out small elements that are likely just noise. This process is employed in algorithms such as REMAUI~\cite{remaui} (a tool for reverse engineering of mobile application GUIs), UISeg~\cite{uiseg} (user interface segmentation algorithm), and also in the current implementation of AIVA's element detection procedure.
 
-Template matching represents another localization approach, though it lacks flexibility. It works reliably for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed GUI style). However, it is ineffective for mobile or web applications where GUI components vary widely in design~\cite{ODforGUI_CV_DL_or_both}.
+Template matching represents another approach for localization, though it lacks flexibility. It works reliably for highly standardized elements (e.g., checkboxes or buttons in desktop applications with a fixed GUI style). However, it is ineffective for mobile or web applications where GUI components vary widely in design~\cite{ODforGUI_CV_DL_or_both}.
 
-Despite recent advances in deep learning, traditional CV continues to offer several advantages. It can be much more efficient and straightforward to understand, making it easier to modify and debug. Each step of the algorithm can be observed, facilitating debugging and parameter adjustment. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which require a lot of manual labor to create. Furthermore, this reliance increases the risk of obsolescence, as DL-based models may not generalize well to evolving GUI design trends~\cite{DLvsTCV}.
+Despite recent advances in deep learning, traditional CV continues to offer several advantages. It can be much more efficient and straightforward to understand. The effects of each step of the algorithm can be viewed, making debugging and parameter adjustments based on observed issues possible. These sorts of modifications are difficult to achieve with DL. Another significant benefit is the reduced dependency on large training datasets, which require a lot of manual labor to create.
 
 \section{Supervised deep learning-based solutions}
 Over the past decade, state-of-the-art object detection algorithms have relied almost exclusively on deep neural networks incorporating convolutional layers. Two of the most prominent model families are Region-based Convolutional Neural Networks (R-CNNs) and You Only Look Once (YOLO). Generally, R-CNNs offer higher accuracy, while YOLO provides better speed, though performance varies by model and use case~\cite{ObjectDetectionHistorySurvey}.
 
-One example of a deep learning-based GUI element detection algorithm is OmniParser\footnote{\url{https://microsoft.github.io/OmniParser/}}, a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to enhance the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}. Daneshvar et al.~\cite{GUI_YOLO_comparison} evaluated various YOLO architectures for GUI element detection, achieving promising results. During its earlier use for testing physical touchscreen devices, AIVA employed a model based on the Single Shot Detection (SSD) architecture~\cite{Horak2020thesis}.
+One example of a deep learning-based GUI element detection algorithm is OmniParser, a fine-tuned YOLOv8 model for parsing and labeling GUIs. It was created to enhance the performance of large multi-modal agents like GPT-4V~\cite{OmniParser}. Daneshvar et al.~\cite{GUI_YOLO_comparison} evaluated various YOLO architectures for GUI element detection, achieving promising results. During its earlier use for testing physical touchscreen devices, AIVA employed a model based on the Single Shot Detection (SSD) architecture~\cite{Horak2020thesis}.
 
-A major advantage of DL-based approaches lies in their ability to automatically learn complex patterns from data, without requiring explicit programming or manual domain-specific tuning. However, as stated in the previous section, this reliance on a dataset is also one of the main drawbacks. Moreover, both training and inference phases typically require significantly more computational resources than traditional CV algorithms~\cite{DLvsTCV}.
+A major advantage of DL-based approaches lies in their ability to automatically learn complex patterns from data, without requiring explicit programming or manual domain-specific tuning. However, this reliance on a dataset is also one of the main drawbacks. Furthermore, it increases the risk of obsolescence, as DL-based models may not generalize well to evolving GUI design trends~\cite{DLvsTCV}. Moreover, both training and inference phases typically require significantly more computational resources than traditional CV algorithms~\cite{DLvsTCV}.
 
 \section{Object detection with reinforcement learning}
 
 The previous two sections highlight two significant challenges. Traditional CV is insufficient for more complex images, while supervised DL methods require access to large, high-quality datasets\footnote{By \enquote{high-quality} I mean a dataset that is large, has accurate annotations, and includes larger enclosing elements. More in Subsection~\ref{subsec:dataset}.}. A combination of both could, in theory, eliminate or at least mitigate these drawbacks. One possible solution involves creating a function that evaluates bounding box prediction quality based on traditional CV techniques. This function could then serve as a supervisory signal for training a deep learning model, thus eliminating the need for manually labeled ground-truth bounding boxes. Instead, only images of web applications would be required, which are significantly easier to obtain.
 
-Supervised learning models are not applicable if we only have a numerical score for predictions rather than ground truth labels. Instead, we can use a reinforcement learning model that learns from evaluative feedback (more details on RL in Chapter~\ref{ch:dlr}).
+Supervised learning models are not applicable when only a numerical score is available as opposed to ground truth labels. Instead, a reinforcement learning model that learns from evaluative feedback could be used (more details on RL in Chapter~\ref{ch:dlr}).
 
-To the best of my knowledge, no author has investigated multi-object detection using reinforcement learning. Nonetheless, prior studies have examined its use for single-object detection in photographs~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning.
+To the best of my knowledge, no author has investigated multi-object detection using reinforcement learning. Nonetheless, prior studies have examined its use for single-object detection~\cite{iterative_od_with_rl, hierarchical_od_with_drl} and for region proposal in multi-object detection~\cite{drl_rpn}. They all use ground-truth labels for learning.
 
 \chapter{Deep reinforcement learning}
 \label{ch:dlr}
 
-The theory behind reinforcement learning is essential for understanding the terminology and decisions presented in the following chapters. This chapter provides the necessary background to understand the remainder of this thesis. Note that this is a brief, non-exhaustive introduction covering only the most important algorithms and definitions.
+The theory behind reinforcement learning is essential for understanding the terminology and decisions presented in the following chapters. This chapter provides the necessary background to understand the remainder of this thesis. Note that this is a brief, non-exhaustive introduction covering only the most important concepts and definitions.
 
 Unless stated otherwise, the notation and information used in this chapter are adopted from \textit{Grokking Deep Reinforcement Learning} by Miguel Morales~\cite{GDRL}.
 
@@ -172,23 +174,23 @@ Machine learning (ML) is the study of algorithms that allow computers to learn f
 
 In supervised learning (SL), the goal is to make predictions based on labeled data available during training, such as in classification or regression tasks. In unsupervised learning (UL), no correct labels are known, so it is more about finding patterns in the provided data. This approach can be used to, for example, separate the data into groups (clustering) or to generate new, similar data using models such as autoencoders or generative adversarial networks~\cite{IB031, PV021}.
 
-Similar to SL, reinforcement learning involves learning a mapping from inputs to outputs, but differs fundamentally in the type of feedback provided. Unlike in SL, where the correct labels are provided for training purposes, RL relies only on the feedback from a reward function. This function evaluates the agent's decisions based on their outcomes, by providing scalar feedback that reflects the quality of the chosen actions. The agent aims to learn to make decisions that maximize this reward through trial and error. RL is ideal for decision-making, especially in environments where the optimal strategy is unknown or difficult to obtain.
+Similar to SL, reinforcement learning involves learning a mapping from inputs to outputs, but differs fundamentally in the type of feedback provided. Unlike in SL, where the correct labels are provided for training purposes, RL relies only on the feedback from a reward function. This function evaluates the model's decisions based on their outcomes, by providing scalar feedback that reflects the quality of the chosen actions. The model aims to learn to make decisions that maximize this reward through trial and error. RL is ideal for decision-making, especially in environments where the optimal strategy is unknown or difficult to obtain.
 
 \section{Reinforcement learning}
 Reinforcement learning problems consist of two interacting entities: the agent and the environment. The agent is the algorithm taught to make decisions. The environment comprises everything external to the agent. For example, in a driving task, the environment includes other vehicles, road conditions, pedestrians, and the controlled car itself.
 
-The typical interaction between agent and environment in RL follows a cycle, as illustrated in Figure~\ref{fig:rl-cycle}. In the beginning, the environment is in some initial state. The agent observes the state (although in many cases, it may only have access to a partial observation of the full state) and chooses an action it thinks is the best. The environment receives and reacts to this choice, changing its inner state. The agent observes this new state and gets rewarded based on the chosen action. The agent can then update its behavior based on this feedback. Then, it again chooses an action, and the cycle repeats.
+The typical interaction between an agent and an environment in RL follows a cycle, as illustrated in Figure~\ref{fig:rl-cycle}. In the beginning, the environment is in some initial state. The agent observes the state (although in many cases, it may only have access to a partial observation of the full state) and chooses an action it deems to be the best. The environment receives and reacts to this choice, changing its inner state. The agent observes this new state and gets rewarded based on the chosen action. The agent can then update its behavior based on this feedback. Then, it again chooses an action, and the cycle repeats.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{diagrams/rl_cycle.pdf}
-    \caption{The reinforcement learning cycle}
+    \caption{The interaction cycle in reinforcement learning. Learning is denoted by a dashed line, as it is optional.}
     \label{fig:rl-cycle}
 \end{figure}
 
-A single iteration of this cycle is referred to as a time step, and it generates an experience -- a tuple of the original state $s$, the action taken $a$, the reward given $r$, and the new state $s'$. Depending on the task, the cycle may continue indefinitely or terminate once the environment reaches a designated terminal state. For example, in a chess game, the end is defined as winning, losing, or a draw. Such tasks are called episodic, with all experiences from the initial to the terminal state forming an episode. If there is no well-defined end, the task is referred to as continuous.
+A single iteration of this cycle is referred to as a time step, and it generates an experience -- a tuple of the original state $s$, the action taken $a$, the reward given $r$, and the new state $s'$. Depending on the task, the cycle may continue indefinitely or terminate once the environment reaches a designated terminal state. For example, in a chess game, the end is defined as winning, losing, or achieving a draw. Such tasks are called episodic, with all experiences from the initial to the terminal state forming an episode. If there is no well-defined end, the task is referred to as continuous.
 
-The reward function may be dense, sparse, or lie somewhere in between. A dense reward function awards the agent a non-zero reward in each iteration of the RL cycle. A sparse reward function only gives a non-zero reward when the environment transitions into a terminal state. While dense reward functions are generally easier to learn from, in some cases, they can be challenging to implement. In the chess example, we know that losing is negative and winning is positive, but judging a single move is problematic unless we know the optimal strategy.
+The reward function may be dense, sparse, or lie somewhere in between. A dense reward function awards the agent a reward in each iteration of the RL cycle. A sparse reward function only gives a reward when the environment transitions into a terminal state. While dense reward functions are generally easier to learn from, in some cases, they can be challenging to implement. In the chess example, we know that losing is negative and winning is positive, but judging a single move is problematic unless we know the optimal strategy.
 
 Reinforcement learning is challenging due to the sequential, evaluative, and sampled nature of the feedback.
 
@@ -196,14 +198,14 @@ The sequentiality comes from the fact that most tasks span multiple time steps. 
 
 Evaluative feedback refers to the reward being provided as a scalar value. Without additional context, it is impossible to know if the received reward was the best possible and if we should thus repeat the decision in similar states or whether it was terrible and should be avoided in the future. This issue leads to the need for exploration discussed in Section~\ref{sec:explor-exploit}.
 
-The agent can only learn from the states it has visited and the actions it has taken, thus the feedback it gets is sampled. In many real-life RL problems, there are so many states that trying every combination of state and action is impossible. This challenge also exists in supervised learning, as the dataset will never contain all the data the model might encounter. However, in reinforcement learning, this problem is even worse as the agent must collect all the data on its own.
+The agent can only learn from the states it has visited and the actions it has taken. Thus, the feedback it gets is sampled. In many real-life RL problems, there are so many states that exploring every combination of state and action is impossible. This challenge also exists in supervised learning, as the dataset will almost never contain all the data the model can encounter. However, in reinforcement learning, this problem is even worse as the agent must collect all the data on its own.
 
 \section{Markov decision process}
 In order to define RL and its objective, it is first necessary to define the environment. There are multiple ways to do so, but the most common representation is a Markov decision process (MDP). An MDP is defined as a tuple $(S, A, p, r)$.
 
-$S$ is the state space, a set of all possible environment states. It can contain both discrete and continuous values. At each time step $t$, the MDP is in a state $s_t\in S$.
+$S$ is the state space, a set of all possible environment states. At each time step $t$, the MDP is in a state $s_t\in S$.
 
-$A$ is the action space, a set of all possible actions an agent can perform within the MDP. It may also be discrete, continuous, or a combination of both. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
+$A$ is the action space, a set of all possible actions an agent can perform within the MDP. The actions can be both discrete and continuous. At each time step $t$, the agent chooses an action $a_t\in A$ based on the observed state $s_t$.
 
 $p$ is the probabilistic transition function $p\colon S \times A \to \mathcal{D}(S)$. For a given state $s\in S$ and a given action $a\in A$, it returns a probability distribution $\mathcal{D}(S)$ over the states $s'\in S$. It specifies the probability of the MDP transitioning from the state $s$ to a state $s'$ given that an action $a$ was selected. Formally, it is defined as:
 \begin{equation}
@@ -234,7 +236,7 @@ Similarly, a set of all terminal states may be defined. The MDP terminates when 
 
 Simple Markov decision processes can be visualized as diagrams, as illustrated in Figure~\ref{fig:mdp}.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{diagrams/mdp.pdf}
     \caption{Graphical representation of a Markov decision process. Squares depict terminal states. Transition probabilities (purple) and rewards (green) are indicated.}
@@ -243,34 +245,34 @@ Simple Markov decision processes can be visualized as diagrams, as illustrated i
 
 \subsection{Markov property}
 \label{subsec:markov_property}
-The probabilistic transition function $p$ only takes the current state and action as inputs. Notably, it does not take into account the history of past states or actions. The probability of transitioning to state $s'$ after taking action $a$ in state $s$ is independent of the sequence of prior states and actions that led to $s$. This memorylessness of MDPs is known as the Markov property. This property is important to remember during environment implementation, as many RL algorithms operate under the assumption that it is satisfied. It can be formally defined as
+The probabilistic transition function $p$ only takes the current state and action as inputs. Notably, it does not consider the history of past states or actions. The probability of transitioning to state $s'$ after taking action $a$ in state $s$ is independent of the sequence of prior states and actions that led to $s$. This memorylessness of MDPs is known as the Markov property. This property is important to remember during environment implementation, as many RL algorithms operate under the assumption that it is satisfied. It can be formally defined as:
 \begin{equation}
 P(S_{t+1}\mid S_t,A_t)=P(S_{t+1}\mid S_t,A_t,S_{t-1},A_{t-1}, \dotsc)
 \end{equation}
-An example of an environment that violates the Markov property is the game Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. A single frame does not provide sufficient information to determine the ball’s direction or speed after the next action. Thus, the history of the past states is required. This issue can be addressed by explicitly including the ball’s position, speed, and direction in the state representation (or using other techniques such as frame-stacking, where multiple preceding frames are included in the observation).
+An example of an environment that violates the Markov property is the game Pong\footnote{\url{https://en.wikipedia.org/wiki/Pong}}, where the state is only the current frame. A single frame does not provide sufficient information to determine the ball’s direction or speed after the next action. Thus, the history of the past states is required. This issue can be addressed by explicitly including the ball’s position, speed, and direction in the state representation (or by using other techniques such as frame-stacking, where multiple preceding frames are included in the observation).
 
 \subsection{Partially observable MDPs}
-Standard MDPs may be insufficient for accurately modeling real-world environments; however, various extensions have been proposed to address these limitations. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
+Standard MDPs may be insufficient for accurately modeling real-world environments; however, various extensions have been proposed to address these limitations. In RL, we often encounter partially observable MDPs (POMDPs) where the agent does not have access to the true state but only to an observation of it. POMDPs further define the observation space $\mathcal{O}$ and a state-observation mapping function $\epsilon \colon S \to \mathcal{D}(\mathcal{O})$.
 
 \section{Policy}
-With the environment formally defined as an MDP, the agent can also be defined. The agent can be viewed as an entity that, upon receiving a state $s$ (or an observation of it), selects an action $a$, which results in a reward $r$ and a transition to a new state $s'$. As mentioned, the tuple $(s, a, r, s')$ is referred to as an experience. The entire sequence of these experiences is called a trajectory $\tau$. Since the final state of one experience is the initial state of the next, the trajectory can be simplified as follows: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that, depending on the type of task and definition of the terminal states, the trajectory can be infinitely long. A history is then some finite prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$.
+With the environment formally defined as an MDP, the agent can also be defined. The agent can be viewed as an entity that, upon receiving a state $s$ (or an observation of it), selects an action $a$, which results in a reward $r$ and a transition to a new state $s'$. As mentioned, the tuple $(s, a, r, s')$ is referred to as an experience. The entire sequence of these experiences is called a trajectory $\tau$. Since the final state of one experience is the initial state of the next, the trajectory can be simplified as follows: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc \in (S\times A \times \mathbb{R})^{*}$. Note that, depending on the type of the task and the definition of the terminal states, the trajectory can be infinitely long. A history is then some finite prefix of a trajectory ending in a state: $s_0,a_0,r_1,s_1,a_1,r_2,\dotsc, a_{t-1},r_t,s_t\in (S\times A \times \mathbb{R})^{*}\times S$.
 The agent's behavior is governed by a policy. A policy $\pi$ is a function $\pi\colon (S\times A \times \mathbb{R})^{*}\times S \to \mathcal{D}(A)$, which returns a probability distribution over the action space based on the history up to that point~\cite{PA230}.
 
-If the environment satisfies the Markov property, the policy definition can be simplified to just $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can also be memoryless. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history might be helpful to differentiate between them).
+If the environment satisfies the Markov property, the policy definition can be simplified to $\pi\colon S \to \mathcal{D}(A)$ because, in that case, the environment is memoryless, and thus, it does not matter how it ended up in the state $s_t$. Thanks to this, the agent (and its underlying policy) can also be memoryless. Note that this is only true if the agent receives the entire state, so this simplification can not be applied to POMDPs (two different states might produce the same observation, and the history can be helpful to differentiate between them).
 
-We can further simplify the policy by making it deterministic -- instead of returning a probability distribution $\mathcal{D}(A)$, it returns a single action $a$. Such a policy can be defined as just $\pi\colon S\to A$.
+The policy can be further simplified by making it deterministic. Instead of returning a probability distribution $\mathcal{D}(A)$, it returns a single action $a$. Such a policy can be defined as simply $\pi\colon S\to A$.
 
-\section{The goal of RL}
+\section{The goal of reinforcement learning}
 \label{sec:goal}
 With the environment (MDP) and the agent (policy) formally defined, we can now define the objective of reinforcement learning. The objective is to find an optimal policy $\pi^*$ that maximizes the expected discounted cumulative reward, commonly referred to as the discounted return. The cumulative reward (or return) of a trajectory $\tau$ is the sum of all received rewards:
 \begin{equation}
 G(\tau) = r_1+r_2+r_3+\dotsb = \sum_{i=1}^{\infty} r_i
 \end{equation}
-The discounted return is obtained by applying an exponential decay to future rewards using a discount factor $\gamma \in [0,1]$. Discounting serves two purposes. First, since trajectories can be infinite, a policy that enters a reward-generating cycle (even with small rewards) could result in an infinite return. Second, it encourages policies to achieve rewards sooner, as earlier rewards are less heavily discounted. The discounted return $G$ on a trajectory $\tau$ with discount factor $\gamma$ is defined as:
+The discounted return is obtained by applying an exponential decay to future rewards using a discount factor $\gamma \in [0,1]$. Discounting serves two purposes. First, since trajectories can be infinite, a policy that enters a reward-generating cycle (even with small rewards) could result in an infinite return. Second, it encourages policies to achieve rewards sooner, as earlier rewards are less heavily discounted. The discounted return $G$ on a trajectory $\tau$ with a discount factor $\gamma$ is defined as:
 \begin{equation}
 G(\tau)=r_1+\gamma \cdot r_2+ \gamma^2 \cdot r_3+\dotsb = \sum_{i=1}^{\infty} \gamma^{i-1}\cdot r_{i}
 \end{equation}
-Finally, we consider the expected discounted return. Since environments are often stochastic, initial states may vary, and the identical state-action pair may lead to different transitions each time. As a result, even a deterministic policy can produce different trajectories in the same MDP, each yielding potentially different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, rather than optimizing for any particular instance.
+Finally, we consider the expected discounted return. Since environments are often stochastic, initial states may vary, and identical state-action pairs may lead to different transitions each time. As a result, even a deterministic policy can produce different trajectories in the same MDP, each yielding potentially different returns. Thus, it is important to find such a policy that will, on average, have the highest discounted return, rather than optimizing for one particular instance.
 
 \section{Value functions}
 
@@ -278,7 +280,7 @@ For a given policy $\pi$, we define value functions that measure its performance
 
 \subsection{State-value function}
 \label{subsec:state_value_func}
-The state-value function $v_\pi\colon S\to \mathbb{R}$ (often referred to as just the value function) gives the expected return of policy $\pi$ when starting in a state $s$.
+The state-value function $v_\pi\colon S\to \mathbb{R}$ (often referred to as just the value function) gives the expected return of a policy $\pi$ when starting in a state $s$:
 \begin{equation}
 v_\pi(s) = \mathbb{E}_\pi [G_t\mid S_t=s]
 \end{equation}
@@ -286,14 +288,14 @@ v_\pi(s) = \mathbb{E}_\pi [G_t\mid S_t=s]
 If we have access to the underlying MDP, we can calculate the state-value function directly using the Bellman equation:
 
 \begin{equation}
-v_\pi(s) = \sum_a \pi(a\mid s) \cdot \sum_{s',r} p(s',r\mid s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
+v_\pi(s) = \sum_a \pi(a\mid s) \cdot \sum_{s',\,r} p(s',r\mid s,a)\cdot[r+\gamma v_\pi(s')], \forall s \in S
 \end{equation}
 
 Due to the recursive nature of this formula, it would be difficult to calculate directly, so in practice, an iterative algorithm that uses an already existing approximation for the next state is used. When the environment's dynamics are unknown, sample-based methods such as Monte Carlo and temporal difference are employed to approximate value functions through interaction.
 
 \subsection{Action-value function}
 
-While the state-value function indicates the quality of a state, it is of little help when choosing an action unless the agent also knows the transition function. The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ provides the expected return when taking an action $a$ in a state $s$ and following policy $\pi$ from there.
+While the state-value function indicates the quality of a state, it is of little help when choosing an action unless the agent also knows the transition function. The action-value function $q_\pi\colon S \times A \to \mathbb{R}$ provides the expected return when taking an action $a$ in a state $s$ and following policy $\pi$ from there:
 
 \begin{equation}
 q_\pi(s,a) = \mathbb{E}_\pi [G_t\mid S_t=s,A_t=a]
@@ -303,7 +305,7 @@ Action-value functions are particularly useful for improving policies and form t
 
 \subsection{Action-advantage function}
 
-Lastly, the advantage function $a_\pi$ quantifies how much better or worse taking a specific action $a$ in a state $s$ is, compared to the expected performance of following policy $\pi$:
+Lastly, the advantage function $a_\pi\colon S \times A \to \mathbb{R}$ quantifies how much better or worse taking a specific action $a$ in a state $s$ is, compared to the expected performance of following policy $\pi$:
 
 \begin{equation}
 a_\pi(s,a) = q_\pi(s,a)-v_\pi(s)
@@ -315,12 +317,12 @@ In practice, especially when using neural networks as function approximators, it
 \label{sec:explor-exploit}
 As mentioned in Subsection~\ref{subsec:state_value_func}, many RL algorithms rely on approximating a value function using an iterative algorithm and then use this information to improve the policy. The agent must interact with the environment repeatedly to collect experiences and improve the approximation. To create the best approximation, it would be ideal to run the policy from every possible state and evaluate every possible action, ideally many times, to account for randomness. This is clearly infeasible for environments with more than a few thousand states, and it is impossible for environments with continuous state or action spaces.
 
-Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation tradeoff. Should we rather try new actions and risk spending time on unproductive paths (exploration), or stick to strategies that are already known to perform reasonably well (exploitation)?
+Since exhaustive exploration is infeasible, RL algorithms must balance two competing objectives: discovering new strategies (exploration) and leveraging known good strategies (exploitation). This challenge is known as the exploration-exploitation tradeoff. Should we rather try new actions and risk spending time on unproductive paths (exploration), or use strategies that are already known to perform reasonably well (exploitation)?
 
 The goal is to find the optimal policy while minimizing the number of time steps needed to do so. To manage this tradeoff effectively, various exploration strategies have been developed. Below are three commonly used approaches:
 
 \begin{itemize}
-    \item (Decaying) epsilon-greedy exploration strategy -- at each decision point, a random action is selected with probability $\varepsilon \in [0,1]$, otherwise, the action currently estimated to be the best is chosen. Typically, $\varepsilon$ decays over time to minimize exploration in the later stages of training.
+    \item (Decaying) epsilon-greedy exploration strategy -- at each decision point, a random action is selected with a probability $\varepsilon \in [0,1]$, otherwise, the action currently estimated to be the best is chosen. Typically, $\varepsilon$ decays over time to minimize exploration in the later stages of training.
     \item Upper confidence bound strategy -- when choosing which action to perform next, a bonus is added to the estimates with lower confidence (those that are less explored). The bonus is calculated as $c\sqrt{\frac{\ln{t}}{N_t(a)+1}}$ where $c$ is a constant describing the importance of this bonus, $t$ is the episode number and $N_t(a)$ is how many times the action $a$ was already chosen in this state (plus one to avoid division by zero).
     \item Softmax exploration strategy -- the probability of selecting an action is proportional to the exponentiated estimate of its action value. To get the probabilities, we pass the estimates through the softmax function, which will normalize them so that they are all between zero and one and their sum is equal to one. The softmax function is defined as $\sigma (v)_i = \frac{e^{v_i}}{\sum^{K}_{j=1}e^{v_j}}$ for the $i$-th value of a vector $v$ with $K$ elements. This strategy may not work well at the beginning when the estimates have high variance. To combat this issue, we divide the estimates by a decaying hyperparameter $\tau$ called temperature. This makes the differences in estimates less important at the beginning of the training.
 \end{itemize}
@@ -337,7 +339,7 @@ Over the last decade, numerous reinforcement learning algorithms have been propo
 
 The most straightforward approach to reinforcement learning is learning to approximate the action-value function (either directly or by computing it using the state-value and advantage-value functions) and then using a greedy policy that selects the best action based on these approximations.
 
-In simple environments with small, discrete state and action spaces, each state-action combination estimate can be explicitly represented in a table. There are many different algorithms utilizing this principle (known as tabular algorithms). They differ in the way they calculate the approximations (temporal difference (TD), Monte Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. Some more advanced algorithms approximate not only the Q function but also the underlying MDP to learn more efficiently (Dyna-Q).
+In simple environments with small, discrete state and action spaces, each state-action combination estimate can be explicitly represented in a table. There are many different algorithms utilizing this principle (known as tabular algorithms). They differ in the way they calculate the approximations (temporal difference (TD), Monte Carlo (MC), $\lambda$-TD), whether they use the same model for the approximation and exploration (SARSA, Q-learning), and in their exploration strategies. Some more advanced algorithms approximate not only the Q-function but also the underlying MDP to learn more efficiently (Dyna-Q).
 
 While tabular algorithms perform well in simple environments, they become infeasible in more complex scenarios. Even for just a $100 \times 100$ pixel binary image state, $2^{10\,000} \approx 10^{3\,010}$ estimates would be necessary for each action.
 
@@ -353,17 +355,17 @@ Purely policy-based algorithms are rarely used nowadays, but they are an importa
 
 Actor-critic methods combine both value-based and policy-based methods into one. They consist of two components: the actor and the critic. The critic estimates the state-value function, while the actor represents the policy and selects actions. The critic learns just like the value-based methods by minimizing TD or MC errors. The actor then learns by maximizing the expected return based on the value estimations provided by the critic.
 
-Actor-critic methods combine the strengths of both value-based and policy-based methods. They are more stable, more sample-efficient, and can deal with discrete and continuous action spaces. State-of-the-art actor-critic algorithms include Twin Delayed Deep Deterministic Policy Gradient (TD3), Soft Actor-Critic (SAC), and Proximal Policy Optimization (PPO).
+Actor-critic methods combine the strengths of both value-based and policy-based methods. They are more stable, more sample-efficient, and can deal with both discrete and continuous action spaces. State-of-the-art actor-critic algorithms include Twin Delayed Deep Deterministic Policy Gradient (TD3), Soft Actor-Critic (SAC), and Proximal Policy Optimization (PPO).
 
 \chapter{RL in practice}
 
 The previous chapter provided a brief overview of the theory and terminology related to reinforcement learning. This chapter goes more into the practical part of RL, that is, the libraries used to implement environments and train agents in them. It provides the necessary context to understand the source code used in the experiments presented in this thesis.
 
-As with most machine learning tasks, Python is one of the most popular programming languages for RL. Although AIVA is primarily implemented in .NET, using Python does not pose a limitation, as most machine learning libraries support model export to standard formats such as ONNX\footnote{\url{https://onnx.ai/}}. This enables agents trained in Python to be deployed natively in other programming environments, including .NET.
+As with most machine learning tasks, Python is one of the most popular programming languages for RL. Although AIVA is primarily implemented in .NET, using Python does not pose a limitation, as most machine learning libraries support model export to standard formats such as ONNX\footnote{\url{https://onnx.ai}}. This enables agents trained in Python to be deployed natively in other programming environments, including .NET.
 
 \section{Gymnasium}
 \label{sec:gym}
-Gymnasium\footnote{\url{https://gymnasium.farama.org/}} is a Python library that allows for easy creation of RL environments. It is an actively maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev/}} library developed by OpenAI. Its primary objective is to define a unified API for reinforcement learning environments. Additionally, it includes numerous wrappers that simplify tasks such as normalization, reward clipping, training monitoring, and parallel environment vectorization. The library also includes a wide range of predefined environments that can be used to evaluate new RL algorithms. The content of this section is based on the official Gymnasium documentation~\cite{gym-docs}.
+Gymnasium\footnote{\url{https://gymnasium.farama.org}} is a Python library that allows for easy creation of RL environments. It is an actively maintained fork of the Gym\footnote{\url{https://www.gymlibrary.dev}} library developed by OpenAI. Its primary objective is to define a unified API for reinforcement learning environments. Additionally, it includes numerous wrappers that simplify tasks such as normalization, reward clipping, training monitoring, and environment vectorization for parallelized training. The library also includes a wide range of predefined environments that can be used to evaluate new RL algorithms. The content of this section is based on the official Gymnasium documentation~\cite{gym-docs}.
 
 In Gymnasium, an environment is implemented as a Python class that inherits from the \texttt{Env} base class. Within the class's initialization method, the observation and action space types must be specified. Gymnasium supports the following space types:
 
@@ -388,7 +390,7 @@ The environment class is required to implement the following methods:
 Once an environment is defined, it must be registered using the \texttt{gymnasium.envs.registration.register} function. Registered environments can be later created using the \texttt{gymnasium.make} function. Such an environment can then be wrapped in the aforementioned wrappers and passed to a reinforcement learning algorithm.
 
 \section{Stable-Baselines3}
-Stable-Baselines3\footnote{\url{https://stable-baselines3.readthedocs.io/en/master/}} (SB3) is a Python library that provides implementations of RL algorithms. It originated as a maintained fork of OpenAI's Baselines\footnote{\url{https://github.com/openai/baselines}} library but has since evolved to include numerous additional algorithms, an improved API, and comprehensive documentation. The algorithms are implemented using PyTorch, allowing simple modifications of the underlying neural networks and GPU-accelerated training. These implementations are designed to interact seamlessly with environments conforming to the Gymnasium API described in Section~\ref{sec:gym}. The information in this section is based on the official SB3 documentation~\cite{SB3-docs}.
+Stable-Baselines3 (SB3)\footnote{\url{https://stable-baselines3.readthedocs.io}} is a Python library that provides implementations of RL algorithms. It originated as a maintained fork of OpenAI's Baselines\footnote{\url{https://github.com/openai/baselines}} library but has since evolved to include numerous additional algorithms, an improved API, and comprehensive documentation. The algorithms are implemented using PyTorch, allowing simple modifications of the underlying neural networks and GPU-accelerated training. These implementations are designed to interact seamlessly with environments conforming to the Gymnasium API described in Section~\ref{sec:gym}. The information in this section is based on the official SB3 documentation~\cite{SB3-docs}.
 
 A new model is instantiated by creating an object of one of SB3’s algorithm classes (e.g., \texttt{PPO}, \texttt{A2C}, or \texttt{DDPG}) and providing the environment and additional parameters such as hyperparameters, GPU settings, and logging options. The library also supports saving and loading models via the \texttt{save} and \texttt{load} methods.
 
@@ -396,16 +398,16 @@ Once a model has been created, it can be trained using the \texttt{learn} method
 
 Model inference is performed using the \texttt{predict} method, which outputs the action selected by the model for a given observation.
 
-I chose this library over others mainly because it contains algorithm implementations, a simple-to-use API, and extensive documentation. I decided not to implement the algorithms on my own since that would likely lead to inferior results, and using existing implementations should not have any negative effects on the outcome of the experiments.
+I chose this library over others because it contains algorithm implementations, a simple-to-use API, and extensive documentation. I decided not to implement the algorithms on my own since that would likely lead to inferior results, and using existing implementations should not have any negative effects on the outcome of the experiments.
 
 \section{Optuna}
 \label{sec:optuna}
 
-Optuna\footnote{\url{https://optuna.org/}} is an open-source framework used for automated hyperparameter search or, in general, for optimizing any function with parameters. It uses state-of-the-art algorithms to suggest hyperparameters based on previous evaluations, making it much more time-efficient than usual methods such as grid search. The information in this section is sourced from the official documentation~\cite{optuna-docs}.
+Optuna\footnote{\url{https://optuna.org}} is an open-source framework used for automated hyperparameter search or, in general, for optimizing any function with parameters. It uses state-of-the-art algorithms to suggest hyperparameters based on previous evaluations, making it much more time-efficient than usual methods such as grid search. The information in this section is sourced from the official documentation~\cite{optuna-docs}.
 
 Optuna is able to optimize arbitrary objective functions. An objective function receives a \texttt{trial} object as input and uses methods such as \texttt{trial.suggest\_int} or \texttt{trial.suggest\_categorical} to obtain hyperparameter values. It then returns a floating-point value that quantifies the performance of the model, typically an accuracy metric, or, in the context of RL, the mean episode reward. A study is then created using the \texttt{optuna.create\_study} function. This study can run a number of trials, after which it returns the hyperparameters that performed the best.
 
-A study can be connected to a relational database that stores previous trial results. Those can then be visualized using Optuna Dashboard\footnote{\url{https://optuna-dashboard.readthedocs.io/}}. It provides visualizations such as hyperparameter importance, optimization progress over trials, and distribution plots of parameter values.
+A study can be connected to a relational database that stores previous trial results. Those can then be visualized using Optuna Dashboard\footnote{\url{https://optuna-dashboard.readthedocs.io}}. It provides visualizations such as hyperparameter importance, optimization progress over trials, and distribution plots of parameter values.
 
 Multiple Optuna instances can run in parallel using the same database. This allows for effortless distributed tuning on multiple machines with almost linear scaling.
 
@@ -413,7 +415,7 @@ If the objective function yields intermediate results, Optuna can be configured 
 
 \section{Hardware}
 
-Most state-of-the-art RL algorithms rely on deep learning techniques. Training large neural networks efficiently requires sufficiently powerful hardware. Most of the experiments in this thesis were done on my personal computer equipped with an Intel i5-12400 CPU and an NVIDIA RTX 3080 GPU. For long-running experiments, I used one of Y Soft's GPU nodes equipped with an AMD Ryzen 9 5950X CPU and an NVIDIA RTX A4000 GPU. The performance of these two systems is comparable when training in a single environment. However, in vectorized environments, the 16-core AMD Ryzen 9 5950X significantly outperforms the six-core Intel i5-12400.
+Most state-of-the-art RL algorithms rely on deep learning techniques. Training large neural networks requires sufficiently powerful hardware. Most of the experiments in this thesis were performed on my personal computer equipped with an Intel i5-12400 CPU and an NVIDIA RTX 3080 GPU. For long-running experiments, I used one of Y Soft's GPU nodes equipped with an AMD Ryzen 9 5950X CPU and an NVIDIA RTX A4000 GPU. The performance of these two systems is comparable when training in a single environment. However, in vectorized environments, the 16-core AMD Ryzen 9 5950X significantly outperforms the six-core Intel i5-12400.
 
 \chapter{Experiments}
 \label{ch:experiments}
@@ -423,7 +425,7 @@ This chapter presents the reinforcement learning environments designed to simula
 \section{Defining the problem}
 \label{sec:problem_definition}
 
-Before training models, the problem at hand must be defined. The goal is to create an algorithm that receives an image as input (be it a direct screenshot of a website or a preprocessed version to simplify the task). It outputs a set of bounding boxes, each corresponding to an object in the image. The algorithm should find all objects in the image.
+Before training models, the problem at hand must be defined. The goal is to create an algorithm that receives an image as input (be it a direct screenshot of a website or a preprocessed version to simplify the task). It outputs a set of bounding boxes, each corresponding to an object in the image. The algorithm must find all objects in the image.
 
 With regular supervised learning, the variable length of the output presents a challenge. Each image can contain a different number of objects. This is not an issue for RL, as it is naturally sequential with different episode lengths. We need the agent to perform actions that are convertible into bounding boxes (be it a one-to-one relationship where each action is one selection or a many-to-one relationship where multiple actions are combined to form a single selection). Previously detected objects must be marked in some way in the image, since the agent has no memory (see Subsection~\ref{subsec:markov_property}).
 
@@ -456,13 +458,13 @@ The simplest problem that still approximates the real task is defined as follows
     \item Algorithm: \texttt{PPO} with the default \texttt{CnnPolicy} provided by SB3 (the network architecture is shown in Figure~\ref{fig:cnn_policy} in the Appendix), default hyperparameters.
 \end{itemize}
 
-\begin{figure}
+\begin{figure}[h]
     \includegraphics[width=0.25\linewidth]{env_examples/env0.jpg}
     \caption{Example of the simplest environment with a static square.}
     \label{fig:env0}
 \end{figure}
 
-I expected the model to overfit quickly since the state was always identical. It reached an average IoU of 0.94 after around 160,000 time steps, but it started to critically forget shortly after, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior occurred less frequently in the more complex environments, I assume the problem was too simple for a complex algorithm such as \texttt{PPO}.
+I expected the model to overfit quickly since the state was always identical. It reached an average IoU of 0.94 after 160,000 time steps, but it started to critically forget shortly after, and it never recovered. Nonetheless, the environment was successfully solved. Since this behavior occurred less frequently in the more complex environments, I assume the problem was too simple for a complex algorithm such as \texttt{PPO}.
 
 Figure~\ref{fig:v0_rew} shows the mean reward per episode during the training. Because each episode consists of a single observation, the maximum achievable reward is one, corresponding to a perfect IoU. The $x$-axis shows the elapsed time steps.
 
@@ -476,7 +478,7 @@ Figure~\ref{fig:v0_rew} shows the mean reward per episode during the training. B
 % env v1 %
 The next progression involved randomizing the square's position within the image. All the other parameters (reward, action, and algorithm) remained unchanged. Figure~\ref{fig:env1} shows some examples of this environment.
 
-\begin{figure}
+\begin{figure}[h]
     \includegraphics[width=1\linewidth]{env_examples/env1.pdf}
     \caption{Four examples of the environment with a randomly placed square.}
     \label{fig:env1}
@@ -489,7 +491,7 @@ The best-performing model was able to place the bounding box within the region o
 % env v2 %
 The next environment closely resembled the previous one, with the key difference that the object could now vary in size rather than being a fixed-size square. Both the placement and size were chosen randomly, but with a few constraints. The rectangle’s width and height were constrained to be at least 10 percent of the image dimensions, and its position was restricted to ensure it remained fully within the image boundaries. A few examples are shown in Figure~\ref{fig:env2}.
 
-\begin{figure}
+\begin{figure}[h]
     \includegraphics[width=1\linewidth]{env_examples/env2.pdf}
     \caption{Four examples of the environment with a randomly placed rectangle.}
     \label{fig:env2}
@@ -528,7 +530,7 @@ Both \texttt{MlpPolicy} and \texttt{CnnPolicy} were evaluated. This time, they b
 
 As mentioned in Section~\ref{sec:problem_definition}, using four real numbers, there are multiple ways to define a bounding box. Before, I interpreted the action as $(x, y, w, h)$. In this experiment, I changed the meaning to $(x_1, y_1, x_2, y_2)$ or the coordinates of the top-left and bottom-right corners. The rationale was that since convolutions are translation-invariant but not scale-invariant, detecting the corners might be easier than detecting the full object, especially when its size varies.
 
-This change slightly improved the performance of the CNN-based model (from 0.8 to 1), but the MLP-based model's performance dropped from 0.8 to 0.5.
+This change slightly improved the performance of the CNN-based model (from 0.8 to 1), but the MLP-based model's performance worsened from 0.8 to 0.5.
 
 \subsection{Transfer from previous environment}
 
@@ -551,7 +553,7 @@ This new architecture demonstrated a clear improvement. It outperformed the simp
     \label{fig:v3_bigger_net}
 \end{figure}
 
-The resulting model took around six hours to train and reached a mean reward of around 2.1 per episode or an average IoU of 0.6. One factor that reduced the average reward was that, when the image contained two objects far from one another, the model repeatedly predicted a bounding box positioned between them until the episode was truncated. An example of a situation where this problem occurred can be seen in Figure~\ref{fig:v3_stuck}.
+The resulting model took six hours to train and reached a mean reward of 2.1 per episode or an average IoU of 0.6. One factor that reduced the average reward was that, when the image contained two objects far from one another, the model repeatedly predicted a bounding box positioned between them until the episode was truncated. An example of a situation where this problem occurred can be seen in Figure~\ref{fig:v3_stuck}.
 
 \begin{figure}
     \centering
@@ -565,7 +567,7 @@ The resulting model took around six hours to train and reached a mean reward of 
 %v4 env%
 Now that the model could locate multiple rectangles in a single image, the next step was to introduce other shapes. This new environment was identical to the previous one, but the state could also contain ellipses and triangles instead of just rectangles. Since the rules remained unchanged, there were, on average, 3.5 objects per image, and their bounding boxes did not overlap. Figure~\ref{fig:env4} shows some examples of this environment.
 
-\begin{figure}
+\begin{figure}[h]
     \includegraphics[width=1\linewidth]{env_examples/env4.pdf}
     \caption{Four examples of the environment with multiple different objects}
     \label{fig:env4}
@@ -573,7 +575,7 @@ Now that the model could locate multiple rectangles in a single image, the next 
  
 Training with the larger network initially resembled that of the previous environment. However, after 2,500,000 time steps, it stopped learning at a mean episode reward of just over 1.5.
 
-Since the problem was similar to the previous one, I tried using transfer learning with the best model from the previous environment. After just 150,000 time steps, it got to a reward of 1.9 and then slowly climbed to a reward of 2.2 for the rest of the training.
+Since the problem was similar to the previous one, I used transfer learning with the best model from the previous environment. After 150,000 time steps, it got to a reward of 1.9 and then slowly climbed to a reward of 2.2 for the rest of the training.
 
 This result demonstrated that achieving strong performance in this environment was feasible. However, I wanted to avoid transfer learning until the very end, because if necessary this early on, it would create a very long and impractical chain of models that depend on one another. Therefore, I aimed to improve the network architecture further.
 
@@ -590,16 +592,16 @@ A minor complication is that ResNet-18 accepts color images with three channels 
 
 It is important to note that the ResNet-18 weights provided by PyTorch were pre-trained on the ImageNet-1k v1 dataset~\cite{torchvision2016}. As this dataset is quite different from my use case, the positive effects of the pre-trained feature extractor could be lowered.
 
-I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were unsatisfactory, reaching a mean episode reward of 0.5 after 200,000 time steps and not improving further. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. In this test, the training performance improved significantly, achieving a reward of approximately 2.8 in under 2.5 million time steps.
+I tried again in the same environment. At first, I used the weights from PyTorch and froze them because I thought this would speed up the training. The results were unsatisfactory, reaching a mean episode reward of 0.5 after 200,000 time steps and not improving further. Next, I ran the same test, but this time, the weights were no longer frozen and could thus adapt to the new problem. In this test, the training performance improved significantly, achieving a reward of 2.8 in under 2.5 million time steps.
 To test whether it was the larger feature extractor or the pre-trained weights that caused this improvement, I ran another experiment, where the feature extractor was initialized randomly. This experiment resulted in a mean episode reward of under 2, proving the importance of pre-trained weights. The comparison of these three experiments and the best result reached with the previous architecture can be seen in Figure~\ref{fig:v4_resnet_graph}. 
 
-\begin{figure}
+\begin{figure}[ht]
     \includegraphics[width=1\linewidth]{graphs/v4_resnet_graph.pdf}
     \caption{Comparison of the mean reward of the pre-trained frozen, pre-trained fine-tunable, and not pre-trained ResNet-18 based agents with the previous architecture. The data was collected by evaluating the agent for 20 episodes after every 10,000 training time steps. For better clarity, the graph contains both raw values and exponential moving averages.}
     \label{fig:v4_resnet_graph}
 \end{figure}
 
-Although the performance improvement was substantial, it significantly increased the training time. Training one million time steps required approximately 2.5 hours, which was about three times longer than with the previous architecture.
+Although the performance improvement was substantial, it significantly increased the training time. Training one million time steps required approximately 2.5 hours, which was around three times longer than with the previous architecture.
 
 \section{Environment with hollow shapes}
 %env 5%
@@ -625,7 +627,7 @@ The size increase did not cause significant differences in the training progress
     \item Calculate IoUs of all the objects that intersect with the guess. The reward is the biggest IoU minus the sum of all the other IoUs multiplied by a constant.
 \end{itemize}
 
-The first option did help, bringing the per-object IoU from 0.5 to around 0.6. The second one had a very minimal impact. Although an IoU of 0.6 is generally regarded as acceptable~\cite{DLforVisualSystems}, this experiment indicated that the current solution struggled even with fewer than ten objects, which is concerning given that a typical website contains many more.
+The first option helped, bringing the per-object IoU from 0.5 to around 0.6. The second had a very minimal impact. Although an IoU of 0.6 is generally regarded as acceptable~\cite{DLforVisualSystems}, this experiment indicated that the current solution struggled even with fewer than ten objects, which is concerning given that a typical website contains many more.
 
 \section{Hierarchical environment}
 \label{sec:hierarchical-env}
@@ -634,14 +636,14 @@ Up to this point, all environments contained non-overlapping objects. They were 
 
 Initially, I attempted to use the same technique of randomly placing non-overlapping objects. However, this time I permitted overlaps where one object was entirely contained within another. This strategy was ineffective. The number of objects varied widely between attempts, objects were placed too closely together, and the resulting hierarchies were shallow. So, instead, I created a generator that directly created a tree-like structure.
 
-The generator begins with a root object that spans the entire image. It then selects an internal region with a random offset relative to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. The maximum depth, the minimum size of an object, the minimum spacing, and the number of children are customizable. Examples of this hierarchical structure are shown in Figure~\ref{fig:env7}.
-
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{env_examples/env7.pdf}
     \caption{Four examples of the new hierarchical environment}
     \label{fig:env7}
 \end{figure}
+
+The generator begins with a root object that spans the entire image. It then selects an internal region with a random offset relative to the parent object and randomly selects the number of children, their sizes, and the spacing between them. The algorithm then does this recursively for each child. The maximum depth, the minimum size of an object, the minimum spacing, and the number of children are customizable. Examples of this hierarchical structure are shown in Figure~\ref{fig:env7}.
 
 A new reward function was needed as well. I devised and implemented the following method. First, identify all objects that the predicted bounding box either intersects or fully contains. If none are found, include any object that fully contains the prediction (at minimum, this will always be the root object). If only one such object exists, the reward is calculated as the IoU between the predicted box and the object, minus the percentage of the object’s area that is occupied by unguessed child objects. The selected object, along with all its descendants, is then removed from the environment. If multiple intersecting objects exist, the one deepest in the hierarchy is chosen, and the same calculation is performed. The episode terminates when the root object is removed.
 
@@ -649,13 +651,13 @@ I tested this new environment by training two new models. One with randomly init
 
 \subsection{Manual hyperparameter tuning}
 
-Until this point, I had not experimented with hyperparameters. Since I needed to encourage exploration, this seemed like a good opportunity. I manually experimented with the following parameters:
+Until this point, I had not experimented with hyperparameters. Since I needed to encourage exploration, this was a good opportunity to do so. I manually experimented with the following parameters:
 
 \begin{itemize}
     \item The discount factor $\gamma$ (described in Section~\ref{sec:goal}) -- By default, this parameter is set to 0.99. Given the environment’s design, each episode has a fixed maximum number of steps, and an optimal policy is expected to utilize all available steps. Thus, discounting is unnecessary, and $\gamma$ should be set to 1.
     \item Entropy loss coefficient $c_2$ -- The PPO loss function contains an entropy bonus that rewards less deterministic policies. Increasing it should thus lead to a more stochastic model and more exploration~\cite{PPO_paper}. By default, this hyperparameter is set to 0.
     \item Clipping range $\epsilon$ -- One of the main benefits of PPO is its clipping function that prevents large updates to the policy and value function, which should prevent it from making drastic changes~\cite{PPO_paper}. By increasing it, the training might become more unstable, but it also might help to get out of local maxima.
-    \item Learning rate $\varepsilon$ -- When updating the policy network, the gradient is multiplied by the learning rate. A higher learning rate should make the training faster, but at the same time, the jumps are more significant, which can lead to unstable learning.
+    \item Learning rate $\varepsilon$ -- When updating the policy network, the gradient is multiplied by the learning rate. A higher learning rate should make the training faster, but at the same time, the changes are more significant, which can lead to unstable learning.
 \end{itemize}
 
 I experimented with both increasing and decreasing each of these parameters; however, none produced a substantial improvement in performance. Later, when I discovered Optuna (see Section~\ref{sec:optuna}), I also attempted an automated hyperparameter search, but even that had minimal impact. With few remaining options for improving training performance, I opted to explore an entirely different approach.
@@ -694,7 +696,7 @@ Compared to the previous approach in the same environment, training required app
 
 Since the results in the simple single-rectangle environment were satisfactory, I continued and modified the environment described in Section~\ref{sec:multi-rect} to use discrete actions. To address the accuracy issues caused by large step sizes in the previous environment, I implemented two actions per direction: one that reduced the bounding box by 15 percent and another that reduced it by 2.5 percent. Although this change slightly increased the task complexity, it enabled more precise predictions using fewer steps.
 
-This is the environment in which, under the previous approach, I had to switch to a larger network architecture. This time, I started directly with the ResNet-18-based network. This configuration performed well, achieving a mean episode reward of 2.1 in approximately 700,000 time steps, significantly fewer than the 10,000,000 required by the previous approach, even though each episode took around 80 time steps compared to just 3.5 previously.
+This is the environment in which, under the previous approach, I had to switch to a larger network architecture. This time, I started directly with the ResNet-18-based network. This configuration performed well, achieving a mean episode reward of 2.1 in 700,000 time steps, significantly fewer than the 10,000,000 required by the previous approach, even though each episode took around 80 time steps compared to just 3.5 previously.
 
 \section{Hierarchical environment with discrete actions}
 
@@ -702,7 +704,7 @@ Given the success of the new approach, I proceeded to test it on the hierarchica
 
 \subsection{Changing to dense reward function}
 
-Unfortunately, this new approach did not lead to improved performance. The agent struggled even to reach positive rewards. I decided to modify the reward function to more closely align with the one described in~\cite{iterative_od_with_rl}. The primary modification involved changing from a semi-sparse reward function, which only provided feedback for trigger actions, to a dense reward function that assigned rewards for every action.
+This new approach did not lead to improved performance. The agent struggled even to reach positive rewards. I decided to modify the reward function to more closely align with the one described in~\cite{iterative_od_with_rl}. The primary modification involved changing from a semi-sparse reward function, which only provided feedback for trigger actions, to a dense reward function that assigned rewards for every action.
 
 I devised the following reward function. After each interaction, find all leaf objects (with no children) that overlap with the current selection. If no such elements are found, a reward of zero is given. Otherwise, find the element that has the highest IoU with the current selection. If the selected action is the trigger action and the IoU exceeds 0.5, a reward of 3 is given; otherwise, a reward of -3 is assigned. In both cases, the element is removed from the observation. If it is not the trigger action, compare the IoU with the previous best IoU and reward the difference. The episode ends once all nodes are removed.
 
@@ -710,7 +712,7 @@ After further experimentation, I modified the trigger action reward to scale wit
 
 \subsection{Automated hyperparameter tuning}
 
-Since there was little progress, I decided to revisit hyperparameter tuning, but this time using Optuna (see Section~\ref{sec:optuna}).
+Since there was little progress, I revisited hyperparameter tuning, but this time using Optuna (see Section~\ref{sec:optuna}).
 
 I ran a study of 200 trials, each running 200,000 time steps (unless terminated earlier due to pruning). The entire tuning process spanned approximately 24 hours. However, the optimal hyperparameters were identified in trial 23 within the first 3 hours. According to this study, the most important hyperparameter was the learning rate. Reducing the default learning rate to approximately one-tenth, combined with linear decay, yielded a notable improvement in performance.
 
@@ -728,11 +730,11 @@ Having successfully trained a model to detect elements in a hierarchical environ
 \subsection{Dataset}
 \label{subsec:dataset}
 
-Ideally, I aimed to find a dataset containing website screenshots with corresponding element annotations. Such datasets do exist, for example, those presented in~\cite{roboflow-dataset-1, roboflow-dataset-2}. Unfortunately, they are small (at most a bit over 1,000 images), contain only the leaf elements (i.e., the smallest visual components), and exclude larger structural sections such as spans or divs, and often contain straight-up wrong or duplicate annotations. This limitation reinforces the motivation for this thesis, which aims to train a DL-based model without relying on such annotated datasets.
+Ideally, I aimed to find a dataset containing website screenshots with corresponding element annotations. Such datasets do exist, for example, those presented in~\cite{roboflow-dataset-1, roboflow-dataset-2}, but they are small (at most a bit over 1,000 images), contain only the leaf elements (i.e., the smallest visual components), exclude larger structural sections such as spans or divs, and often contain straight-up wrong or duplicate annotations. This limitation reinforces the motivation for this thesis, which aims to train a DL-based model without relying on such annotated datasets.
 
 Instead, I chose to use a dataset that contains just the screenshots and then estimate the approximate locations of elements using a CV-based function. The best public dataset I found was~\cite{aydos2020}. This dataset contains 20,000 website screenshots split into four categories: machinery, music, sport, and tourism (the original purpose of the dataset is to classify these categories). It provides screenshots in two resolutions: $224\times224$ pixels (which are too small for this application) and $1440\times900$ pixels.
 
-For each image, I identified the elements using the following method. First, convert the image to grayscale and apply a bilateral filter, which reduces the impact of textured backgrounds that could interfere with edge detection. Next, locate edges using the Canny edge detection algorithm, and connect close ones using morphological closing. Finally, connected components are identified, and those below a minimum size threshold are discarded. A new black image of the same dimensions as the original screenshot is created, and white rectangles corresponding to the detected objects are overlaid. The result is similar to what I generated in the last environment, but based on an actual website. Since the original image is not provided to the model, occasional missed detections do not pose a significant issue. The individual steps are shown in Figure~\ref{fig:simple-detector}.
+For each image, the elements are identified using the following method. First, convert the image to grayscale and apply a bilateral filter, which reduces the impact of textured backgrounds that could interfere with edge detection. Next, locate edges using the Canny edge detection algorithm, and connect close ones using morphological closing. Finally, connected components are identified, and those below a minimum size threshold are discarded. A new black image of the same dimensions as the original screenshot is created, and white rectangles corresponding to the detected objects are overlaid. The result is similar to what I generated in the last environment, but based on an actual website. Since the original image is not provided to the model, occasional missed detections do not pose a significant issue. The individual steps are shown in Figure~\ref{fig:simple-detector}.
 
 \begin{figure}
     \centering
@@ -741,7 +743,7 @@ For each image, I identified the elements using the following method. First, con
     \label{fig:simple-detector}
 \end{figure}
 
-Using this method, an average of 26 objects per image was detected. Assuming a target IoU of 0.7 under the current reward function, the goal episode reward for this environment was approximately 72 per episode. A few examples of the initial states are shown in Figure~\ref{fig:env8}.
+Using this method, an average of 26 objects per image was detected. Assuming a target IoU of 0.7 under the current reward function, the goal mean reward for this environment was 72 per episode. A few examples of the initial states are shown in Figure~\ref{fig:env8}.
 
 \begin{figure}
     \centering
@@ -754,7 +756,7 @@ Using this method, an average of 26 objects per image was detected. Assuming a t
 
 At first, I reused the reward function from the previous environment. In that setting, with fewer than 10 objects, the function performed reasonably well. However, when the number of objects exceeded 20, the agent failed to learn effective behavior. The resulting model repeatedly placed large predictions until the episode terminated.
 
-To address this issue, I modified the logic to consider not only leaf objects. If the initial prediction was large and achieved the highest IoU with the root element, the episode was terminated immediately. Unfortunately, this brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards. The selection would worsen until it became small enough to have a better IoU with another element. To mitigate potential confusion caused by consistently negative rewards, I added a condition that excluded the root element from calculations unless it was the only remaining object.
+To address this issue, I modified the logic to consider not only leaf objects. If the initial prediction was large and achieved the highest IoU with the root element, the episode was terminated immediately. This brought yet another problem. Since the initial selection is identical to the root element, the next couple of actions would always result in negative rewards. The selection would worsen until it became small enough to have a better IoU with another element. To mitigate potential confusion caused by consistently negative rewards, I added a condition that excluded the root element from calculations unless it was the only remaining object.
 
 Following this modification, the model achieved an average reward of approximately 20 per episode.
 
@@ -805,7 +807,7 @@ One potential issue I noticed when debugging the environment was that the agent 
 
 Although the final performance after 20 million training steps was nearly identical (stable mean episode reward of around 80 per episode), it did learn faster, especially at the beginning.
 
-\section{Finding objects in a real image}
+\section{Environment with a screenshot as the state}
 %v9 env%
 
 The previous environment showed that it is possible to train a model capable of finding objects even in relatively complex hierarchies. However, it was still locating only rectangles in a heavily preprocessed image. This preprocessing required detecting all objects in advance using a separate method, thereby diminishing the practical value of the model. The next step was to create an environment with only minimal image preprocessing that does not require prior knowledge of object locations. The environment processes a website screenshot by detecting edges and expanding them using morphological dilation. Figure~\ref{fig:env9} shows some examples of the state the model receives.
@@ -821,7 +823,7 @@ Apart from the change in the observation space, this environment was similar to 
 
 When training in this environment using the same setup as before, the agent achieved a peak mean episode reward of 46.
 
-The first modification involved changing the method used to scale the image. In the previous environments, the image was always binary. This was because the objects were marked by only a one-pixel-wide outline, which would nearly disappear when the image was significantly downscaled. Here, this was no longer the case. By preserving all 256 grayscale pixel values, the model gained access to richer visual information, enabling it to discern finer details. As a result of this change, the average episode reward increased from 46 to 53.
+The first modification involved changing the method used to scale the image. In the previous environments, the image was always binary. This was because the objects were marked by only a one-pixel-wide outline, which would nearly disappear when the image was downscaled. Here, this was no longer the case. By preserving all 256 grayscale pixel values, the model gained access to richer visual information, enabling it to discern finer details. As a result of this change, the average episode reward increased from 46 to 53.
 
 \subsection{Changing the feature extractor}
 \label{subsec:feat_extract_two}
@@ -837,7 +839,7 @@ Training with the SqueezeNet feature extractor yielded a mean episode reward of 
 
 This section outlines additional optimizations that could improve the performance and usability of the RL-based agents.
 
-The current action design results in a slow detector, as each prediction typically requires dozens of individual actions. Adjusting the shrinkage percentage or introducing additional action types could significantly reduce the number of required steps. With the originally attempted continuous actions, a single step per object would be sufficient. A hybrid approach combining discrete and continuous actions, where the model selects both a direction and a shrinkage percentage, could also be effective. However, the SB3 library currently does not support mixed action spaces.
+The current action design results in a slow detector, as each prediction typically requires dozens of individual actions. Adjusting the shrinkage percentage or introducing additional action types could reduce the number of required steps. With the originally attempted continuous actions, a single step per object would be sufficient. A hybrid approach combining discrete and continuous actions, where the model selects both a direction and a shrinkage percentage, could also be effective. However, the SB3 library currently does not support mixed action spaces.
 
 Although the final environment does not rely on ground-truth labels to construct observations, it still depends on them for reward calculation. These labels do not need to be manually provided, as they are generated using a CV-based function. For real-world applications, a reward function that does not require ground-truth labels would be more practical.
 
@@ -856,12 +858,13 @@ In the previous chapter, I described the development of a GUI element detector t
 To create a detector based purely on traditional computer vision algorithms without the use of machine learning, I combined techniques described in Section~\ref{sec:traditionalCV} to improve the earlier detector described in Subsection~\ref{subsec:dataset}. The primary differences were the use of contour tracing and stricter object filtering. The entire algorithm is described in detail in Appendix~\ref{ap:cv}.
 
 \section{Supervised DL-based detector}
+\label{sec:yolo}
 
 A second common approach to object detection, particularly for more complex images, involves deep convolutional neural networks capable of predicting a variable number of bounding boxes trained using supervised learning.
 
-I chose not to implement such a model from scratch. Instead, I opted for YOLOv8~\cite{yolov8_ultralytics}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com/}} in 2023. YOLOv8 is a collection of pre-trained models for various tasks and of multiple sizes (ranging from 2.7 to 99.1 million parameters)~\cite{ultralytics-docs}. Specifically, I used the smallest object detection model \texttt{YOLOv8n}. Although newer versions have since been released, I selected YOLOv8, since I have worked with it previously, and prior studies have demonstrated its effectiveness in detecting GUI elements~\cite{GUI_YOLO_comparison}.
+Instead of implementing a model from scratch, I opted for using YOLOv8~\cite{yolov8_ultralytics}, a collection of pre-trained models for various tasks and of various network sizes (ranging from 2.7 million to 99.1 million parameters)~\cite{ultralytics-docs}. It was developed by Ultralytics\footnote{\url{https://www.ultralytics.com}} in 2023. Although newer versions have since been released, I selected YOLOv8, since I have worked with it previously, and prior studies have demonstrated its effectiveness in detecting GUI elements~\cite{GUI_YOLO_comparison}. Specifically, I used the smallest object detection model \texttt{YOLOv8n}.
 
-The model is pretrained on the COCO dataset~\cite{COCO} and must be fine-tuned for the specific purpose. As mentioned previously, datasets for my task are limited, so for this prototype, I decided to create my own dataset. To do so, I used my CV-based detector (see Section~\ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset~\cite{aydos2020}. It is important to note that this renders any direct accuracy comparison between these two detectors invalid, since the YOLOv8 model is learning to copy the CV-based detector. However, given that all three detectors are prototypes, this limitation is acceptable for the purposes of this comparison. It can be reasonably assumed that if the model performs well on this mocked dataset, it would also generalize effectively when trained on a real annotated dataset.
+The model is pretrained on the COCO dataset~\cite{COCO} and must be fine-tuned for the specific purpose. As mentioned previously, datasets for this task are limited, so for this prototype, I created my own dataset. To do so, I used my CV-based detector (see Section~\ref{sec:trad_cv_detector}) and labeled 10,000 images from the WebScreenshots dataset~\cite{aydos2020}. It is important to note that this renders any direct accuracy comparison between these two detectors invalid, since the YOLOv8 model is learning to copy the CV-based detector. However, given that all three detectors are prototypes, this limitation is acceptable for the purposes of this comparison. It can be reasonably assumed that if the model performs well on this mocked dataset, it would also generalize effectively when trained on a real annotated dataset.
 
 Fine-tuning the model is straightforward. Using the Python Ultralytics API, an instance of the \texttt{YOLO} class is initialized with the path to a pretrained model. Next, the \texttt{train} method is called with the path to the dataset. The epoch count, early stopping criteria, initial learning rate, and other hyperparameters can be specified. However, if these parameters are not provided, the library automatically determines suitable defaults. Ultralytics also provides a command-line interface.
 
@@ -875,9 +878,9 @@ These prototypes are sufficient to compare the underlying approaches and draw at
 
 In classical object detection tasks, accuracy is measured by comparing the predictions with some ground truth labels. However, in the case of UI element detection, this is problematic due to the presence of multiple valid interpretations. For example, a paragraph of text can be detected as a single element, as one element for each row, one for each word, or even one for each letter. We may prefer one of these options over the others, but none of them is inherently wrong. For this and other reasons outlined in the previous section, no quantitative metrics are reported in this section.
 
-The traditional CV-based detector struggles primarily with detecting text and images. The text grouping is inconsistent, short words are filtered out, and text on a background of similar color is missed completely. While entire images are detected correctly, high-contrast internal content is misclassified as separate elements. Some of these problems are illustrated in Figure~\ref{fig:cv-mistakes}.
+The traditional CV-based detector struggles primarily with the detection of text and images. The text grouping is inconsistent, short words are filtered out, and text on a background of similar color is missed completely. While entire images are detected correctly, high-contrast internal content is misclassified as separate elements. Some of these problems are illustrated in Figure~\ref{fig:cv-mistakes}.
 
-\begin{figure}
+\begin{figure}[h]
     \centering
     \includegraphics[width=1\linewidth]{diagrams/cv_mistakes.pdf}
     \caption{Examples of common mistakes made by the CV-based detector.}
@@ -886,7 +889,7 @@ The traditional CV-based detector struggles primarily with detecting text and im
 
 As for the positives, the predictions match the outline of the element well; it does not happen that a prediction is too large or too small. Crucially, when a prediction is incorrect, the cause can be identified and addressed by adjusting the filtering parameters. The white-box nature is, in my opinion, the biggest advantage compared to the other detectors.
 
-Despite being trained on data generated by the CV-based detector, the YOLO-based model ultimately outperformed it. This could be because it was trained only for 100 epochs and thus it did not have time to overfit. Whereas the CV-based detector produced more false negatives (missed elements), this one was more prone to false positives (guessing extra elements). Approximately five percent of the predictions were slightly oversized or undersized on a single edge, which did not happen in the training data. These mistakes are shown in Figure~\ref{fig:yolo-mistakes}.
+Despite being trained on data generated by the CV-based detector, the YOLO-based model ultimately outperformed it. This could be because it was trained only for 100 epochs and thus did not have time to overfit. Whereas the CV-based detector produced more false negatives (missed elements), this one was more prone to false positives (guessing extra elements). Approximately five percent of the predictions were slightly oversized or undersized on a single edge, which did not happen in the training data. These mistakes are shown in Figure~\ref{fig:yolo-mistakes}.
 
 \begin{figure}
     \centering
@@ -895,9 +898,10 @@ Despite being trained on data generated by the CV-based detector, the YOLO-based
     \label{fig:yolo-mistakes}
 \end{figure}
 
+\break
 As the final RL-based detector serves primarily as a proof of concept, its accuracy is not comparable to the other two. Figure~\ref{fig:gov_predict_rl} shows its results on a simple website. While it clearly focuses on the correct areas, the predictions have inaccurate sizes. Since areas of previous guesses are removed from the state, making a large selection can remove other elements and ruin the entire detection, which happened with around 25 percent of images. Overall, the approach shows potential, but a lot more work would have to be invested to make it match the results of the other two methods.
 
-\begin{figure}
+\begin{figure}[hb]
     \centering
     \includegraphics[width=1\linewidth]{results/rl_pred_gov.jpg}
     \caption{Predictions (marked in red) of the final RL-based model on a simple website.}
@@ -909,11 +913,11 @@ As the final RL-based detector serves primarily as a proof of concept, its accur
 
 For real-time applications, the speed of a detector is crucial. AIVA may run tens or even hundreds of detections when testing a website. Thus, the speed of the detector plays an important role.
 
-The prediction times for the YOLO-based detector were by far the fastest. The median prediction time was 12 ms on the GPU and 30 ms on the CPU. The time depended on the number of objects detected, though the differences were small (11 ms for 20 objects, 15 ms for 80 objects). The first prediction was significantly slower, taking approximately 1.5 seconds.
+The prediction times for the YOLO-based detector were by far the fastest. The median prediction time was 12 ms on the GPU and 30 ms on the CPU. The time depended on the number of objects detected, though the differences were small (11 ms for 20 objects, 15 ms for 80 objects). The very first prediction was significantly slower, taking approximately 1.5 seconds.
 
-The CV-based detector was slower, with a median prediction time of 144 ms. Here, the object count played a bigger role (125 ms for 20 objects, 200 ms for 80 objects). However, it does not require any initialization, resulting in a shorter time to first prediction than the YOLO-based detector. If speed were the primary goal, it could be further optimized. For example, the bilateral filter takes up over 46 percent of the runtime. Another 17 percent is spent on thousands of operations involving bounding boxes, many of which could potentially be eliminated or computed more efficiently.
+The CV-based detector was slower, with a median prediction time of 144 ms. Here, the object count played a bigger role (125 ms for 20 objects, 200 ms for 80 objects). However, it does not require any initialization, resulting in a faster first prediction than the YOLO-based detector. If speed were the primary goal, it could be further optimized. For example, the bilateral filter takes up over 46 percent of the runtime due to a large kernel being used. Another 17 percent is spent on thousands of operations involving bounding boxes, many of which could potentially be eliminated or computed more efficiently.
 
-The RL-based detector is slower. While each step of the model only takes a bit over 1 ms on the GPU (around 2 ms on the CPU), this approach also requires simulating the environment (around 0.5 ms per step) and, most crucially, every bounding box prediction requires anywhere from 20 to 50 steps. This results in over 100 milliseconds per bounding box and several seconds for a complete image. Some possibilities of improving this are presented in Section~\ref{sec:further_optim}.
+The RL-based detector is slower. While each step of the model only takes a bit over 1 ms on the GPU (around 2 ms on the CPU), this approach also requires simulating the environment (around 0.5 ms per step) and, most crucially, every bounding box prediction requires anywhere from 20 to 50 steps. This results in over 100 milliseconds per bounding box and several seconds for a complete image. Some possibilities of improving the speed are presented in Section~\ref{sec:further_optim}.
 
 %\begin{table}
 %    \centering
@@ -931,42 +935,78 @@ The RL-based detector is slower. While each step of the model only takes a bit o
 \section{Data requirements}
 \label{sec:data_req}
 
-Since one of the main motivations for using RL was its potential to be less reliant on large quantities of data, I tested how it compared to the YOLO-based detector on smaller datasets. Both final models were trained on 8,000 images (using half of the 20,000 images from~\cite{aydos2020}, with 1,000 reserved for validation and 1,000 for testing). I repeated the trainings on datasets of 1,000 images and 100 images.
+One of the main motivations for using RL was its potential to be less reliant on large quantities of data. The models presented in the previous sections (for both RL and YOLO) were trained on a dataset of 8,000 images. I trained two more versions of both on smaller datasets of 1,000 and 100 images.
 
-The RL models began training with similar performance. After eight million time steps, they all reached a mean episode reward of approximately 38 on the validation data. After that, their improvement speed started to separate. After 20 million time steps, they were reaching stable episode rewards of 65, 59, and 50, respectively. Performance on the training data showed episode rewards of 25, 25, and 30, respectively. These values are lower due to the curriculum learning strategy, in which more objects are introduced only after the model reaches an average TIoU of 0.7. This clearly indicated that the model trained on the smallest dataset was overfitting to the training data. The model trained on the middle-sized dataset exhibited greater difficulties with generalization than the original, but its episode reward curve ended on an upward trend, suggesting it might continue improving with additional training. The exact values are shown in Table~\ref{tab:rl_results}.
+The three RL agents were trained for 20,000,000 time steps each. Their performance on both the training and the validation data is shown in Table~\ref{tab:rl_results}. Note that the training rewards are lower due to the curriculum learning, where the agents receive images with fewer objects until they learn to find them consistently, and thus, a lower possible reward is reachable in earlier stages of the training. Notably, the model with the smallest dataset has a higher training reward but a lower validation reward than the others, which suggests overfitting. The model with the intermediate dataset was performing slightly worse than the original model, but the growth of the validation reward followed a very similar shape, ending with an upward trend. This suggests that with longer training, it would likely reach similar results.
 
-\begin{table}
+\sisetup{
+  group-separator = {\,},
+  group-minimum-digits = 4,
+  table-align-text-post = false,
+  detect-weight = true,
+  detect-family = true
+}
+
+\begin{table}[h]
     \centering
-    \begin{tabular}{c|cccc}
-        Dataset size & Val. 8M & Train 8M & Val. 20M & Train 20M \\
-         \hline
-        8,000 & 35.42 & 11.13 & 64.89 & 25.02 \\
-        1,000 & 34.97 & 10.72 & 58.73 & 24.96 \\
-        100   & 35.91 & 13.91 & 50.36 & 30.15 \\
+    \begin{tabular}{
+        c
+        S[table-format=2.2]
+        S[table-format=2.2]
+        S[table-format=2.2]
+        S[table-format=2.2]
+    }
+    \toprule
+        \textbf{Dataset size} &
+        \textbf{Val. 8M} &
+        \textbf{Train 8M} &
+        \textbf{Val. 20M} &
+        \textbf{Train 20M} \\
+    \midrule
+        8\,000 & 35.42 & 11.13 & 64.89 & 25.02 \\
+        1\,000 & 34.97 & 10.72 & 58.73 & 24.96 \\
+          100 & 35.91 & 13.91 & 50.36 & 30.15 \\
+    \bottomrule
     \end{tabular}
-    \caption{The mean episode rewards of the three agents after 8 million and 20 million time steps on the training and validation data. A higher validation reward is better.}
+    \caption{Mean episode rewards of the three RL agents after 8,000,000 and 20,000,000 time steps on both training and validation data. A higher validation reward is better.}
     \label{tab:rl_results}
 \end{table}
 
-The three YOLO models were trained until they stopped improving (no improvement in evaluation metrics for 100 epochs). The values of evaluation metrics on the validation data are shown in Table~\ref{tab:yolo_results}. Visual inspection showed that the model trained on the intermediate dataset performed similarly to the original, except that it often produced duplicate predictions for approximately 10 percent of elements and generated less precise bounding boxes. The model trained on the smallest dataset exhibited similar issues, but these occurred much more frequently, affecting nearly every detected object.
+The three YOLO models were trained until they stopped improving on the validation data, which took, in descending order of the dataset size, 397, 243, and 331 epochs. Since the dataset size differs and each epoch consists of the entire dataset, this means 3,176,000, 243,000, and 33,100 \enquote{training steps} respectively. The values of evaluation metrics of the final models are shown in Table~\ref{tab:yolo_results}.
 
-\begin{table}
+Visual inspection showed that the model trained on the intermediate dataset performed similarly to the original, except that it produced duplicate predictions for approximately 10 percent of elements and generated less precise bounding boxes. The model trained on the smallest dataset exhibited similar issues, but these occurred much more frequently, affecting nearly half of the detected objects.
+
+\begin{table}[H]
     \centering
-    \begin{tabular}{c|cccc}
-        Dataset size & Precision & Recall & mAP50 & mAP50-95 \\
-         \hline
-        8,000 & 0.738 & 0.715 & 0.770 & 0.626 \\
-        1,000 & 0.648 & 0.655 & 0.660 & 0.503 \\
-        100   & 0.642 & 0.562 & 0.557 & 0.380 \\
+    \begin{tabular}{
+        c
+        S[table-format=2.2]
+        S[table-format=2.2]
+        S[table-format=2.2]
+        S[table-format=2.2]
+    }
+    \toprule
+        \textbf{Dataset size} &
+        \textbf{Precision} &
+        \textbf{Recall} &
+        \textbf{mAP50} &
+        \textbf{mAP50-95} \\
+    \midrule
+        8\,000 & 0.718 & 0.697 & 0.754 & 0.613 \\
+        1\,000 & 0.701 & 0.669 & 0.712 & 0.556 \\
+        100  & 0.617 & 0.579 & 0.579 & 0.381\\
+    \bottomrule
     \end{tabular}
-    \caption{The performance metrics of YOLOv8n on different dataset sizes. In all metrics, higher is better.}
+    \caption{The performance metrics of YOLOv8n on different dataset sizes. In all metrics, higher is better. Measured on separate testing data.}
     \label{tab:yolo_results}
 \end{table}
+
+\newpage
 
 \chapter*{Conclusion}
 \markright{\textsc{Conclusion}}
 \addcontentsline{toc}{chapter}{Conclusion}
-This thesis experimentally investigated the feasibility of creating a graphical user interface element detector based on deep reinforcement learning. The goal was to explore an alternative to traditional methods that may require less data. The work included the implementation of ten reinforcement learning environments, some with both continuous and discrete action variants. Over 1,000 hours and approximately one billion time steps were spent training agents in these environments using various network architectures, reward functions, and other hyperparameters. An additional 200 hours were dedicated to automated hyperparameter tuning.
+This thesis experimentally investigated the feasibility of creating a graphical user interface element detector based on deep reinforcement learning. The goal was to explore an alternative to traditional methods that may require less data. The work included the implementation of ten reinforcement learning environments, some with both continuous and discrete action variants. Over 1,000 hours and one billion time steps were spent training agents in these environments using various network architectures, reward functions, and other hyperparameters. An additional 200 hours were dedicated to automated hyperparameter tuning.
 
 The thesis concludes that while it is possible to train an agent for element detection purely via reinforcement learning, conventional methods are more efficient and produce more accurate and consistent results. The thesis also answers the following questions:
 
@@ -984,14 +1024,18 @@ The thesis concludes that while it is possible to train an agent for element det
     As shown in Section~\ref{sec:data_req}, the 8,000 images of web pages used for the experiments seemed to be sufficient, since training the same model on 1,000 images yielded similar results. For practical use, it would be beneficial to collect images of modern web applications, as the dataset used in this thesis did not accurately reflect current user interface design trends.
 \end{enumerate}
 
+
+\begingroup
+\emergencystretch=2em
 \printbibliography[heading=bibintoc] %% Print the bibliography.
+\endgroup
 
 
 \appendix %% Start the appendices.
 \chapter{Neural Network Architectures}
 This appendix contains diagrams of network architectures used in Chapter~\ref{ch:experiments}.
 
-\begin{figure}
+\begin{figure}[h]
     \includegraphics[width=1\linewidth]{diagrams/cnn_arch.pdf}
     \caption{Architecture used by SB3's \texttt{CnnPolicy}.}
     \label{fig:cnn_policy}
@@ -1030,7 +1074,7 @@ This appendix contains diagrams of network architectures used in Chapter~\ref{ch
 \chapter{CV detector algorithm}
 \label{ap:cv}
 
-This appendix describes in detail the algorithm used in the element detector based on traditional computer vision in Section~\ref{sec:trad_cv_detector}. The numerical parameter values mentioned in this section were tuned for images with a resolution of $1440\times900$ pixels. For images of a different size, some of them would have to be changed. Image processing is performed using the OpenCV library\footnote{\url{https://opencv.org/}}.
+This appendix describes in detail the algorithm used in the element detector based on traditional computer vision in Section~\ref{sec:trad_cv_detector}. The numerical parameter values mentioned in this section were tuned for images with a resolution of $1440\times900$ pixels. For images of a different size, some of them would have to be changed. Image processing is performed using the OpenCV library\footnote{\url{https://opencv.org}}.
 
 \section{Preprocessing}
 
@@ -1049,7 +1093,7 @@ Next, Canny edge detection is used to find edge pixels. I chose Canny in particu
 
 A potentially more effective approach would involve applying the algorithm in multiple passes with varying thresholds. Filtering would be more strict with lower thresholds and less strict with higher thresholds. The results of these different passes would then be combined. However, as this implementation was intended as a prototype, and tuning the combinations of thresholds and filters would be time-intensive, this approach was not pursued.
 
-Next, the edges are expanded using morphological dilation with a circular kernel. This addresses two issues. First, it compensates for incomplete or fragmented edge detection. Second, it merges letters of a text into a single blob. Distinguishing between textual contours and noise would be significantly more challenging without this step. This effect is shown in Figure~\ref{fig:dilation}.
+Next, the edges are expanded using morphological dilation with a circular kernel. This addresses two issues. First, it compensates for incomplete or fragmented edge detection. Second, it merges letters of a text into a single blob. Distinguishing between textual contours and noise would be more challenging without this step. This effect is shown in Figure~\ref{fig:dilation}.
 
 \begin{figure}
     \centering
@@ -1058,7 +1102,7 @@ Next, the edges are expanded using morphological dilation with a circular kernel
     \label{fig:dilation}
 \end{figure}
 
-Unfortunately, the dilation also sometimes joins together two separate elements. This issue is mitigated by removing one-pixel-wide connections (foreground pixels surrounded by foreground pixels in one direction but not in the other), though this solution is not perfect. Such pixels are detected using a hit-and-miss transformation and removed.
+The dilation also sometimes joins together two separate elements. This issue is mitigated by removing one-pixel-wide connections (foreground pixels surrounded by foreground pixels in one direction but not in the other), though this solution is not perfect. Such pixels are detected using a hit-and-miss transformation and removed.
 
 Following these preprocessing steps, the image can be processed for contour tracing. This is accomplished using OpenCV's implementation of the Suzuki–Abe algorithm.
 

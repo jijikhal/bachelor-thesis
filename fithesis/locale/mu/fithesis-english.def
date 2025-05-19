@@ -60,8 +60,9 @@
 
   During the preparation of this thesis, I used the following AI tools:
   \begin{itemize}
-      \item Grammarly for grammar checking and writing style improvements,
-      \item ChatGPT for faster code writing and writing style improvements.
+   \setlength\itemsep{0.1em}
+      \item Grammarly for grammar and spelling correction,
+      \item ChatGPT for faster code writing and improving academic writing style.
   \end{itemize}
 I declare that I used these tools in accordance with the principles of academic integrity. I checked the content and took full responsibility for it.
   }
